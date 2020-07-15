@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Convert SQL CLI to CSV</title>
+  </head>
+  <body>
+    <h1>Convert SQL CLI to CSV</h1>
+    <h2><label for="input">Input</label></h2>
+    <textarea name="input" cols="150" rows="20" id="input"></textarea>
+    <h2><label for="output">Output</label></h2>
+    <textarea name="output" cols="150" rows="20" id="output"></textarea>
+    <script type="text/javascript">
+      function csvFromTable(table){
+        return table.split('\n').filter((line) => line[0]!=='+').map((line) => {
+          line = line.substr(1, line.length-2)
+          const fields = line.split(' | ')
+          console.log(fields.length)
+          return fields.map((field) => field.trim()).map((field) => field.replace('"', '""'))
+            .map((field) => '"'+field+'"').join(',')
+        }).join('\n')
+      }
+
+      document.getElementById('input').addEventListener('input', (event) => {
+        console.log(event)
+        document.getElementById('output').value = csvFromTable(event.target.value)
+      })
+    </script>
+  </body>
+</html>
