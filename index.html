@@ -9,7 +9,18 @@
     <textarea name="input" cols="150" rows="19" id="input"></textarea>
     <h2><label for="output">Output</label></h2>
     <textarea name="output" cols="150" rows="19" id="output"></textarea>
-    <p><em>All processing for this is done in your browser; no data is sent to any remote server.</em></p>
+    <p><em>All processing for this is done in your browser; no data is sent to any remote server</em></p>
+    <h3>Example</h3>
+    <p>If you're unsure what input this is expecting, try pasting in the following:</p>
+    <pre>
++---------+--------------+
+| user_id | name         |
++---------+--------------+
+|       1 | Tim Fish     |
+|       9 | Steve Mullet |
+|      23 | Ken Salmon   |
++---------+--------------+
+    </pre>
     <script type="text/javascript">
       function csvFromTable(table){
         return table.split('\n').filter((line) => line[0]!=='+').map((line) => {
