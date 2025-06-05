@@ -9,8 +9,10 @@
     <textarea name="input" cols="150" rows="19" id="input"></textarea>
     <h2><label for="output">Output</label></h2>
     <textarea name="output" cols="150" rows="19" id="output"></textarea>
-    <p></p><label for="field">Field</label> <input type="text" name="field" id="field"/> <input readonly id="field-out"/></p>
-    <p></p><label for="wrap">Wrap</label> <input type="text" name="wrap" id="wrap"/> <input readonly id="wrap-out"/></p>
+    <p><label for="field">Field</label><input type="text" name="field" id="field"/></p>
+    <textarea readonly id="field-out" cols="150" rows="1"></textarea>
+    <p></p><label for="wrap">Wrap</label> <input type="text" name="wrap" id="wrap"/></p>
+    <textarea readonly id="wrap-out" cols="150" rows="1"></textarea>
     <p><em>All processing for this is done in your browser; no data is sent to any remote server</em></p>
     <h3>Example</h3>
     <p>If you're unsure what input this is expecting, try pasting in the following:</p>
@@ -36,10 +38,8 @@
 
       function column(csvString, columnName) {
          const lines = csvString.split('\n');
-         const headers = lines[0].split(',');
+         const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
          const columnIndex = headers.indexOf(columnName);
-
-          console.log('Column processing', {headers, columnIndex})
          return lines.slice(1).map(line => line.split(',')[columnIndex]).filter(val => val);
       }
 
@@ -52,8 +52,8 @@
         console.log('finding field', { field })
         
         if (!csv){
-          const in = document.getElementById('input').value
-          csv = csvFromTable(in)
+          const input = document.getElementById('input').value
+          csv = csvFromTable(input)
         }
 
         fieldOut(csv, field)
@@ -62,7 +62,10 @@
       function fieldOut(csv, field){
         const list = column(csv, field)
 
-        document.getElementById('field-out').value = list.join(',')
+        const fieldOutEl = document.getElementById('field-out')
+      
+        fieldOutEl.value = list.join(',')
+        fieldOutEl.rows = 3
       }
 
       function wrap(csv){
@@ -75,8 +78,8 @@
         console.log('wrapping field', { field, wrap })
         
         if (!csv){
-          const in = document.getElementById('input').value
-          csv = csvFromTable(in)
+          const input = document.getElementById('input').value
+          csv = csvFromTable(input)
         }
 
         wrapOut(csv, field, wrap)
@@ -86,7 +89,9 @@
 
         const list = column(csv, field).map((val) => wrap.replace(/\$\$/g, val))
 
-        document.getElementById('wrap-out').value = list.join(',')
+        const wrapOutEl = document.getElementById('wrap-out')
+        wrapOutEl.value = list.join("\n")
+        wrapOutEl.rows = list.length
       }
 
       document.getElementById('input').addEventListener('input', (event) => {
