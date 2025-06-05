@@ -105,7 +105,7 @@
 
       function wrapOut(csv, field, wrap){
         // Slice(1, -1) here assumes string is always wrapped in comma, simpler than replacing them
-        const list = column(csv, field).map((val) => wrap.replace(/\%\%/g, val.slice(1, -1))
+        const list = column(csv, field).map((val) => wrap.replace(/\%\%/g, val.slice(1, -1)))
 
         const wrapOutEl = document.getElementById('wrap-out')
         wrapOutEl.value = list.join("\n")
