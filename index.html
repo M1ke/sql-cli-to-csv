@@ -9,9 +9,11 @@
     <textarea name="input" cols="150" rows="19" id="input"></textarea>
     <h2><label for="output">Output</label></h2>
     <textarea name="output" cols="150" rows="19" id="output"></textarea>
-    <p><label for="field">Field</label><input type="text" name="field" id="field"/></p>
-    <textarea readonly id="field-out" cols="150" rows="1"></textarea>
-    <p></p><label for="wrap">Wrap</label> <input type="text" name="wrap" id="wrap"/></p>
+    <p>Enter the name of a column, e.g "email" and if your CSV contains that column, the below textarea will include all values comma-separated. </p>
+    <p><label for="field">Column name</label><input type="text" name="field" id="field"/></p>
+    <textarea readonly id="field-out" cols="150" rows="1" placeholder="Waiting for field"></textarea>
+    <p>Wrapping lets you replace a value in a string with the value of the named column above, using the placeholder %% (two percent signs). To see how this works try out "Hello %% world %%"</p>
+    <p><label for="wrap">Wrap</label> <input type="text" name="wrap" id="wrap" style="width: 500px;"/></p>
     <textarea readonly id="wrap-out" cols="150" rows="1"></textarea>
     <p><em>All processing for this is done in your browser; no data is sent to any remote server</em></p>
     <h3>Example</h3>
@@ -43,9 +45,23 @@
          return lines.slice(1).map(line => line.split(',')[columnIndex]).filter(val => val);
       }
 
+      function fieldReset(){
+         const fieldOutEl = document.getElementById('field-out')
+        fieldOutEl.value=''
+        fieldOutEl.rows=1
+      }
+
+      function wrapReset(){
+        fieldReset()
+         const wrapOutEl = document.getElementById('wrap-out')
+        wrapOutEl.value = ''
+        wrapOutEl.rows = 1
+      }
+
       function field(csv){
         const field = document.getElementById('field').value
         if (!field){
+          fieldReset()
           return;
         }
         
@@ -72,6 +88,7 @@
         const field = document.getElementById('field').value
         const wrap = document.getElementById('field').value
         if (!field || !wrap){
+          wrapReset()
           return;
         }
         
@@ -87,7 +104,7 @@
 
       function wrapOut(csv, field, wrap){
 
-        const list = column(csv, field).map((val) => wrap.replace(/\$\$/g, val))
+        const list = column(csv, field).map((val) => wrap.replace(/\%\%/g, val))
 
         const wrapOutEl = document.getElementById('wrap-out')
         wrapOutEl.value = list.join("\n")
