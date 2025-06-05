@@ -10,7 +10,7 @@
     <h2><label for="output">Output</label></h2>
     <textarea name="output" cols="150" rows="19" id="output"></textarea>
     <p>Enter the name of a column, e.g "email" and if your CSV contains that column, the below textarea will include all values comma-separated. </p>
-    <p><label for="field">Column name</label><input type="text" name="field" id="field"/></p>
+    <p><label for="field">Column name</label> <input type="text" name="field" id="field"/></p>
     <textarea readonly id="field-out" cols="150" rows="1" placeholder="Waiting for value column name"></textarea>
     <p>Wrapping lets you replace a value in a string with the value of the named column above, using the placeholder %% (two percent signs). To see how this works try out "Hello %% world %%"</p>
     <p><label for="wrap">Wrap</label> <input type="text" name="wrap" id="wrap" style="width: 500px;"/></p>
@@ -29,7 +29,7 @@
     </pre>
     <script type="text/javascript">
       function csvFromTable(table){
-        return table.split('\n').filter((line) => line[0]!=='+').map((line) => {
+        return table.trim().split('\n').filter((line) => line[0]!=='+').map((line) => {
           line = line.substr(1, line.length-2)
           const fields = line.split(' | ')
           console.log(fields.length)
@@ -103,8 +103,8 @@
       }
 
       function wrapOut(csv, field, wrap){
-
-        const list = column(csv, field).map((val) => wrap.replace(/\%\%/g, val))
+        // Slice(1, -1) here assumes string is always wrapped in comma, simpler than replacing them
+        const list = column(csv, field).map((val) => wrap.replace(/\%\%/g, val.slice(1, -1))
 
         const wrapOutEl = document.getElementById('wrap-out')
         wrapOutEl.value = list.join("\n")
