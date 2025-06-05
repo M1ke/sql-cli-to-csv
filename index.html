@@ -11,10 +11,10 @@
     <textarea name="output" cols="150" rows="19" id="output"></textarea>
     <p>Enter the name of a column, e.g "email" and if your CSV contains that column, the below textarea will include all values comma-separated. </p>
     <p><label for="field">Column name</label><input type="text" name="field" id="field"/></p>
-    <textarea readonly id="field-out" cols="150" rows="1" placeholder="Waiting for field"></textarea>
+    <textarea readonly id="field-out" cols="150" rows="1" placeholder="Waiting for value column name"></textarea>
     <p>Wrapping lets you replace a value in a string with the value of the named column above, using the placeholder %% (two percent signs). To see how this works try out "Hello %% world %%"</p>
     <p><label for="wrap">Wrap</label> <input type="text" name="wrap" id="wrap" style="width: 500px;"/></p>
-    <textarea readonly id="wrap-out" cols="150" rows="1"></textarea>
+    <textarea readonly id="wrap-out" cols="150" rows="1" placeholder="Waiting for valid column name and input to wrap (input must contain %% at least once)"></textarea>
     <p><em>All processing for this is done in your browser; no data is sent to any remote server</em></p>
     <h3>Example</h3>
     <p>If you're unsure what input this is expecting, try pasting in the following:</p>
@@ -86,8 +86,8 @@
 
       function wrap(csv){
         const field = document.getElementById('field').value
-        const wrap = document.getElementById('field').value
-        if (!field || !wrap){
+        const wrap = document.getElementById('wrap').value
+        if (!field || !wrap || wrap.indexOf('%%')<0){
           wrapReset()
           return;
         }
