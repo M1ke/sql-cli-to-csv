@@ -1,165 +1,225 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JWT Parser and Editor</title>
-  <link rel="stylesheet" href="style.css">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>JWT Parser and Editor</title>
+	<link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-<div class="container">
-  <a href="index.html" class="home-link">Back to Home</a>
-  <h1>JWT Parser and Editor</h1>
-  <p class="subtitle">Paste a JWT to decode, edit the parts, and see the reconstructed token</p>
+	<div class="container">
+		<a href="index.html" class="home-link">Back to Home</a>
+		<h1>JWT Parser and Editor</h1>
+		<p class="subtitle">Paste a JWT to decode, edit the parts, and see the reconstructed token</p>
 
-  <div class="section">
-    <label for="input">1. Paste JWT here:</label>
-    <textarea id="input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"></textarea>
-    <div id="inputError" class="error hidden"></div>
-  </div>
+		<div class="section">
+			<label for="input">1. Paste JWT here:</label>
+			<textarea id="input"
+				placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"></textarea>
+			<div id="inputError" class="error hidden"></div>
+		</div>
 
-  <div id="decodedSection" class="hidden">
-    <div class="grid">
-      <div class="section">
-        <label for="header">2. Header (decoded):</label>
-        <textarea id="header"></textarea>
-        <div id="headerError" class="error hidden"></div>
-      </div>
+		<div id="decodedSection" class="hidden">
+			<div class="grid">
+				<div class="section">
+					<label for="header">2. Header (decoded):</label>
+					<textarea id="header"></textarea>
+					<div id="headerError" class="error hidden"></div>
+				</div>
 
-      <div class="section">
-        <label for="payload">3. Payload (decoded):</label>
-        <textarea id="payload"></textarea>
-        <div id="payloadError" class="error hidden"></div>
-      </div>
+				<div class="section">
+					<label for="payload">3. Payload (decoded):</label>
+					<textarea id="payload"></textarea>
+					<div id="payloadError" class="error hidden"></div>
+				</div>
 
-      <div class="section">
-        <label for="signature">4. Signature:</label>
-        <textarea id="signature"></textarea>
-      </div>
-    </div>
+				<div class="section">
+					<label for="signature">4. Signature:</label>
+					<textarea id="signature"></textarea>
+				</div>
+			</div>
 
-    <p>Edit any of the above fields to reconstruct the token. If setting the header "alg" field to a different value, edit the signature (this page won't sign the token for you). If using "alg=none" then clear the signature textarea.</p>
+			<p>Edit any of the above fields to reconstruct the token. If setting the header "alg" field to a different
+				value, edit the signature (this page won't sign the token for you). If using "alg=none" then clear the
+				signature textarea.</p>
 
-    <div class="section">
-      <label for="output">5. Reconstructed JWT:</label>
-      <textarea id="output" readonly></textarea>
-    </div>
-  </div>
-</div>
+			<div class="section">
+				<label for="output">5. Reconstructed JWT:</label>
+				<textarea id="output" readonly></textarea>
+			</div>
 
-<script>
-	const inputEl = document.getElementById('input');
-	const headerEl = document.getElementById('header');
-	const payloadEl = document.getElementById('payload');
-	const signatureEl = document.getElementById('signature');
-	const outputEl = document.getElementById('output');
-	const decodedSection = document.getElementById('decodedSection');
-	const inputError = document.getElementById('inputError');
-	const headerError = document.getElementById('headerError');
-	const payloadError = document.getElementById('payloadError');
+			<div id="verificationSection" class="section hidden">
+				<h3>Signature Verification</h3>
+				<div id="jkuDisplay" class="hidden">
+					<p><strong>JWKS URL found in header:</strong> <code id="jkuUrl"></code></p>
+					<button id="verifyBtn" style="margin-top: 10px;">Fetch Key & Verify</button>
+				</div>
+				<div id="verificationResult" class="hidden"
+					style="margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
+			</div>
+		</div>
+	</div>
 
-	function base64UrlDecode(str) {
-		str = str.replace(/-/g, '+').replace(/_/g, '/');
-		while (str.length % 4) {
-			str += '=';
-		}
-		return decodeURIComponent(atob(str).split('').map(c => {
-			return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-		}).join(''));
-	}
+	<script type="module">
+		import * as jose from 'https://cdn.jsdelivr.net/npm/jose@5.9.6/+esm';
 
-	function base64UrlEncode(str) {
-		return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
-			return String.fromCharCode('0x' + p1);
-		})).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-	}
+		const inputEl = document.getElementById('input');
+		const headerEl = document.getElementById('header');
+		const payloadEl = document.getElementById('payload');
+		const signatureEl = document.getElementById('signature');
+		const outputEl = document.getElementById('output');
+		const decodedSection = document.getElementById('decodedSection');
+		const inputError = document.getElementById('inputError');
+		const headerError = document.getElementById('headerError');
+		const payloadError = document.getElementById('payloadError');
+		const verificationSection = document.getElementById('verificationSection');
+		const jkuDisplay = document.getElementById('jkuDisplay');
+		const jkuUrlEl = document.getElementById('jkuUrl');
+		const verifyBtn = document.getElementById('verifyBtn');
+		const verificationResult = document.getElementById('verificationResult');
 
-	function parseJWT(jwt) {
-		const parts = jwt.trim().split('.');
-		if (parts.length !== 3) {
-			throw new Error('Invalid JWT format. Expected 3 parts separated by dots.');
-		}
 
-		try {
-			const header = base64UrlDecode(parts[0]);
-			const payload = base64UrlDecode(parts[1]);
-			const signature = parts[2];
-
-			const headerJson = JSON.parse(header);
-			const payloadJson = JSON.parse(payload);
-
-			return {
-				header: JSON.stringify(headerJson, null, 2),
-				payload: JSON.stringify(payloadJson, null, 2),
-				signature: signature
-			};
-		} catch (e) {
-			throw new Error('Failed to decode JWT: ' + e.message);
-		}
-	}
-
-	function reconstructJWT() {
-		try {
-			headerError.classList.add('hidden');
-			payloadError.classList.add('hidden');
-
-			const headerJson = JSON.parse(headerEl.value);
-			const payloadJson = JSON.parse(payloadEl.value);
-
-			const encodedHeader = base64UrlEncode(JSON.stringify(headerJson));
-			const encodedPayload = base64UrlEncode(JSON.stringify(payloadJson));
-			const sig = signatureEl.value.trim();
-
-			outputEl.value = `${encodedHeader}.${encodedPayload}.${sig}`;
-		} catch (e) {
-			if (e.message.includes('header') || headerEl.value.trim()) {
-				try {
-					JSON.parse(headerEl.value);
-				} catch {
-					headerError.textContent = 'Invalid JSON in header';
-					headerError.classList.remove('hidden');
-				}
+		function base64UrlDecode(str) {
+			str = str.replace(/-/g, '+').replace(/_/g, '/');
+			while (str.length % 4) {
+				str += '=';
 			}
-			if (e.message.includes('payload') || payloadEl.value.trim()) {
-				try {
-					JSON.parse(payloadEl.value);
-				} catch {
-					payloadError.textContent = 'Invalid JSON in payload';
-					payloadError.classList.remove('hidden');
-				}
+			return decodeURIComponent(atob(str).split('').map(c => {
+				return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+			}).join(''));
+		}
+
+		function base64UrlEncode(str) {
+			return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+				return String.fromCharCode('0x' + p1);
+			})).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+		}
+
+		function parseJWT(jwt) {
+			const parts = jwt.trim().split('.');
+			if (parts.length !== 3) {
+				throw new Error('Invalid JWT format. Expected 3 parts separated by dots.');
+			}
+
+			try {
+				const header = base64UrlDecode(parts[0]);
+				const payload = base64UrlDecode(parts[1]);
+				const signature = parts[2];
+
+				const headerJson = JSON.parse(header);
+				const payloadJson = JSON.parse(payload);
+
+				return {
+					header: JSON.stringify(headerJson, null, 2),
+					payload: JSON.stringify(payloadJson, null, 2),
+					signature: signature
+				};
+			} catch (e) {
+				throw new Error('Failed to decode JWT: ' + e.message);
 			}
 		}
-	}
 
-	inputEl.addEventListener('input', () => {
-		const jwt = inputEl.value.trim();
+		function reconstructJWT() {
+			try {
+				headerError.classList.add('hidden');
+				payloadError.classList.add('hidden');
 
-		if (!jwt) {
-			decodedSection.classList.add('hidden');
-			inputError.classList.add('hidden');
-			return;
+				const headerJson = JSON.parse(headerEl.value);
+				const payloadJson = JSON.parse(payloadEl.value);
+
+				const encodedHeader = base64UrlEncode(JSON.stringify(headerJson));
+				const encodedPayload = base64UrlEncode(JSON.stringify(payloadJson));
+				const sig = signatureEl.value.trim();
+
+				outputEl.value = `${encodedHeader}.${encodedPayload}.${sig}`;
+			} catch (e) {
+				if (e.message.includes('header') || headerEl.value.trim()) {
+					try {
+						JSON.parse(headerEl.value);
+					} catch {
+						headerError.textContent = 'Invalid JSON in header';
+						headerError.classList.remove('hidden');
+					}
+				}
+				if (e.message.includes('payload') || payloadEl.value.trim()) {
+					try {
+						JSON.parse(payloadEl.value);
+					} catch {
+						payloadError.textContent = 'Invalid JSON in payload';
+						payloadError.classList.remove('hidden');
+					}
+				}
+			}
 		}
 
-		try {
-			const decoded = parseJWT(jwt);
-			headerEl.value = decoded.header;
-			payloadEl.value = decoded.payload;
-			signatureEl.value = decoded.signature;
+		inputEl.addEventListener('input', () => {
+			const jwt = inputEl.value.trim();
 
-			decodedSection.classList.remove('hidden');
-			inputError.classList.add('hidden');
+			if (!jwt) {
+				decodedSection.classList.add('hidden');
+				inputError.classList.add('hidden');
+				return;
+			}
 
-			reconstructJWT();
-		} catch (e) {
-			inputError.textContent = e.message;
-			inputError.classList.remove('hidden');
-			decodedSection.classList.add('hidden');
-		}
-	});
+			try {
+				const decoded = parseJWT(jwt);
+				headerEl.value = decoded.header;
+				payloadEl.value = decoded.payload;
+				signatureEl.value = decoded.signature;
 
-	headerEl.addEventListener('input', reconstructJWT);
-	payloadEl.addEventListener('input', reconstructJWT);
-	signatureEl.addEventListener('input', reconstructJWT);
-</script>
+				const headerObj = JSON.parse(decoded.header);
+				if (headerObj.jku) {
+					verificationSection.classList.remove('hidden');
+					jkuDisplay.classList.remove('hidden');
+					jkuUrlEl.textContent = headerObj.jku;
+					verificationResult.classList.add('hidden');
+				} else {
+					verificationSection.classList.add('hidden');
+				}
+
+
+				decodedSection.classList.remove('hidden');
+				inputError.classList.add('hidden');
+
+				reconstructJWT();
+			} catch (e) {
+				inputError.textContent = e.message;
+				inputError.classList.remove('hidden');
+				decodedSection.classList.add('hidden');
+			}
+		});
+
+		verifyBtn.addEventListener('click', async () => {
+			const jwt = inputEl.value.trim();
+			const jku = jkuUrlEl.textContent;
+
+			verificationResult.textContent = 'Fetching keys and verifying...';
+			verificationResult.className = 'hidden';
+			verificationResult.style.backgroundColor = '#e3f2fd';
+			verificationResult.style.color = '#1565c0';
+			verificationResult.classList.remove('hidden');
+
+			try {
+				const JWKS = jose.createRemoteJWKSet(new URL(jku));
+				const { payload, protectedHeader } = await jose.jwtVerify(jwt, JWKS);
+
+				verificationResult.textContent = '✅ Signature Verified!';
+				verificationResult.style.backgroundColor = '#e8f5e9';
+				verificationResult.style.color = '#2e7d32';
+			} catch (e) {
+				verificationResult.textContent = '❌ Verification Failed: ' + e.message;
+				verificationResult.style.backgroundColor = '#ffebee';
+				verificationResult.style.color = '#c62828';
+			}
+		});
+
+
+		headerEl.addEventListener('input', reconstructJWT);
+		payloadEl.addEventListener('input', reconstructJWT);
+		signatureEl.addEventListener('input', reconstructJWT);
+	</script>
 </body>
+
 </html>
