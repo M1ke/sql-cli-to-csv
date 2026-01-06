@@ -9,12 +9,13 @@
   <body class="sql-tool">
     <div class="container">
       <a href="index.html" class="home-link">Back to Home</a>
-      <h1>Convert SQL CLI to CSV</h1>
+      <h1>Convert SQL CLI to CSV (or TSV)</h1>
       <p class="subtitle">Made by M1ke - <a href="https://github.com/M1ke/tools" target="_blank" title="This opens in a new tab">Find this on GitHub</a></p>
     <h2><label for="input">Input</label></h2>
     <textarea name="input" id="input"></textarea>
     <h2><label for="output">Output</label></h2>
     <textarea name="output" id="output"></textarea>
+    <p><label for="format-toggle"><input type="checkbox" id="format-toggle" name="format-toggle"> Use TSV (tab-separated) instead of CSV</label></p>
     <p>Enter the name of a column, e.g "email" and if your CSV contains that column, the below textarea will include all values comma-separated. </p>
     <p><label for="field">Column name</label> <input type="text" name="field" id="field"/></p>
     <textarea readonly id="field-out" placeholder="Waiting for value column name"></textarea>
@@ -34,13 +35,22 @@
 +---------+--------------+
     </pre>
     <script type="text/javascript">
-      function csvFromTable(table){
+      function csvFromTable(table, separator = ','){
+        const useTsv = separator === '\t';
         return table.trim().split('\n').filter((line) => line[0]!=='+').map((line) => {
           line = line.substr(1, line.length-2)
           const fields = line.split(' | ')
           console.log(fields.length)
-          return fields.map((field) => field.trim()).map((field) => field.replace('"', '""'))
-            .map((field) => '"'+field+'"').join(',')
+          const processedFields = fields.map((field) => field.trim());
+
+          if (useTsv) {
+            // For TSV, just join with tabs, no quoting
+            return processedFields.join(separator);
+          } else {
+            // For CSV, quote and escape
+            return processedFields.map((field) => field.replace('"', '""'))
+              .map((field) => '"'+field+'"').join(separator);
+          }
         }).join('\n')
       }
 
@@ -117,14 +127,31 @@
         wrapOutEl.rows = list.length
       }
 
+      function getSeparator() {
+        return document.getElementById('format-toggle').checked ? '\t' : ',';
+      }
+
+      function updateOutput() {
+        const input = document.getElementById('input').value;
+        if (!input) return;
+
+        const separator = getSeparator();
+        const csv = csvFromTable(input, separator);
+        document.getElementById('output').value = csv;
+
+        field(csv);
+        wrap(csv);
+      }
+
       document.getElementById('input').addEventListener('input', (event) => {
         console.log('Input', {event})
-        const csv = csvFromTable(event.target.value)
-        document.getElementById('output').value = csv
-
-        field(csv)
-        wrap(csv)
+        updateOutput();
       })
+
+      document.getElementById('format-toggle').addEventListener('change', () => {
+        updateOutput();
+      })
+
       document.getElementById('field').addEventListener('input', () => field())
       document.getElementById('wrap').addEventListener('input', () => wrap())
     </script>
