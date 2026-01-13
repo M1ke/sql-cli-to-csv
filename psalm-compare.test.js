@@ -533,6 +533,17 @@ runTest('Nested case with inner differences', () => {
 	}, 'Should show both container and nested differences');
 });
 
+runTest('Null vs undefined handling', () => {
+	const input = "expects array{added?: string}, but array{added: null|string} provided";
+	const differences = findDifferences(input);
+	assertEquals(differences, {
+		"added": {
+			"first": "undefined|string",
+			"second": "null|string"
+		}
+	}, 'Should show both container and nested differences');
+});
+
 // ============================================================================
 // Test summary
 // ============================================================================
