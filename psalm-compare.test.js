@@ -581,7 +581,7 @@ runTest('Null vs undefined handling in expects', () => {
 			"expects": "undefined|string",
 			"provided": "null|string"
 		}
-	}, 'Should show both container and nested differences');
+	}, 'Should handle undefined ?: vs null :?');
 });
 
 runTest('Null vs undefined handling in inferred', () => {
@@ -589,10 +589,21 @@ runTest('Null vs undefined handling in inferred', () => {
 	const differences = findDifferences(input);
 	assertEquals(differences, {
 		"added": {
-			"inferred": "undefined|string",
-			"declared": "null|string"
+			"inferred": "null|string",
+			"declared": "undefined|string"
 		}
-	}, 'Should show both container and nested differences');
+	}, 'Should use inferred and declared as field names');
+});
+
+runTest('Null vs undefined handling in declared', () => {
+	const input = "The declared return type 'list<array{added?: string}>}' for Sturents\\Routes\\Page\\Mobile\\PaymentsNew::paymentsAndDatesFromRent is incorrect, got 'list<array{added: null|string}>}'";
+	const differences = findDifferences(input);
+	assertEquals(differences, {
+		"added": {
+			"declared": "undefined|string",
+			"got": "undefined|string",
+		}
+	}, 'Should use declared and got as field names');
 });
 
 // ============================================================================
