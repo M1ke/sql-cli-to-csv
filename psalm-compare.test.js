@@ -511,18 +511,18 @@ runTest('Nested case', () => {
 	assertEquals(differences, {
 		"availability": {
 			"containerType": {
-				"first": "list",
-				"second": "array<int>"
+				"expects": "list",
+				"provided": "array<int>"
 			},
 			"nestedShapeDifferences": {}
 		},
 		"id": {
-			"first": "numeric",
-			"second": "int"
+			"expects": "numeric",
+			"provided": "int"
 		},
 		"status": {
-			"first": null,
-			"second": "bool"
+			"expects": null,
+			"provided": "bool"
 		},
 	}, 'Should handle nested cases');
 });
@@ -546,13 +546,24 @@ runTest('Nested case with inner differences', () => {
 	}, 'Should show both container and nested differences');
 });
 
-runTest('Null vs undefined handling', () => {
+runTest('Null vs undefined handling in expects', () => {
 	const input = "expects array{added?: string}, but array{added: null|string} provided";
 	const differences = findDifferences(input);
 	assertEquals(differences, {
 		"added": {
-			"first": "undefined|string",
-			"second": "null|string"
+			"expects": "undefined|string",
+			"provided": "null|string"
+		}
+	}, 'Should show both container and nested differences');
+});
+
+runTest('Null vs undefined handling in inferred', () => {
+	const input = "The inferred type 'list<array{added: null|string}>}' does not match the declared return type 'list<array{added?: string}>}' for Sturents\\Routes\\Page\\Mobile\\PaymentsNew::paymentsAndDatesFromRent ";
+	const differences = findDifferences(input);
+	assertEquals(differences, {
+		"added": {
+			"inferred": "undefined|string",
+			"declared": "null|string"
 		}
 	}, 'Should show both container and nested differences');
 });
