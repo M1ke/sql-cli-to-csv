@@ -120,12 +120,19 @@ function findTypeEnd(content, start) {
 }
 
 function detectKeyNames(input) {
+	// Check for "declared" and "got" pattern (must check before inferred/declared)
+	const declaredMatch = /\bdeclared\s+(return\s+)?type\b/i.test(input);
+	const gotMatch = /\bgot\s+['"]?list</i.test(input);
+
+	if (declaredMatch && gotMatch) {
+		return { firstKey: 'declared', secondKey: 'got', swap: false };
+	}
+
 	// Check for "inferred" and "declared" pattern
 	const inferredMatch = /\binferred\s+type\b/i.test(input);
-	const declaredMatch = /\bdeclared\s+(return\s+)?type\b/i.test(input);
 
 	if (inferredMatch && declaredMatch) {
-		return { firstKey: 'inferred', secondKey: 'declared', swap: true };
+		return { firstKey: 'inferred', secondKey: 'declared', swap: false };
 	}
 
 	// Check for "expects" and "provided" pattern
@@ -601,7 +608,7 @@ runTest('Null vs undefined handling in declared', () => {
 	assertEquals(differences, {
 		"added": {
 			"declared": "undefined|string",
-			"got": "undefined|string",
+			"got": "null|string",
 		}
 	}, 'Should use declared and got as field names');
 });
