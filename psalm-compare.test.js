@@ -53,12 +53,25 @@ function parseArrayShape(content) {
 		const keyEnd = content.indexOf(':', pos);
 		if (keyEnd === -1) break;
 
-		const key = content.substring(pos, keyEnd).trim();
+		let key = content.substring(pos, keyEnd).trim();
+
+		// Check if the key ends with ? (optional field marker)
+		let isOptional = false;
+		if (key.endsWith('?')) {
+			isOptional = true;
+			key = key.slice(0, -1); // Remove the ? from the key
+		}
+
 		pos = keyEnd + 1;
 		pos = skipWhitespace(content, pos);
 
 		const typeEnd = findTypeEnd(content, pos);
-		const type = content.substring(pos, typeEnd).trim();
+		let type = content.substring(pos, typeEnd).trim();
+
+		// If the field was optional, prepend undefined| to the type
+		if (isOptional) {
+			type = 'undefined|' + type;
+		}
 
 		result[key] = type;
 		pos = typeEnd;
