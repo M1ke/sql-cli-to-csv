@@ -120,19 +120,26 @@ function findTypeEnd(content, start) {
 }
 
 function detectKeyNames(input) {
-	// Check for "declared" and "got" pattern (must check before inferred/declared)
 	const declaredMatch = /\bdeclared\s+(return\s+)?type\b/i.test(input);
+	const inferredMatch = /\binferred\s+(return\s+)?type\b/i.test(input);
 	const gotMatch = /\bgot\s+['"]?list</i.test(input);
 
-	if (declaredMatch && gotMatch) {
+	// Check for "declared" and "got" pattern
+	if (declaredMatch && gotMatch && !inferredMatch) {
 		return { firstKey: 'declared', secondKey: 'got', swap: false };
 	}
 
-	// Check for "inferred" and "declared" pattern
-	const inferredMatch = /\binferred\s+type\b/i.test(input);
-
+	// Check for "inferred" and "declared" pattern (both orderings)
 	if (inferredMatch && declaredMatch) {
-		return { firstKey: 'inferred', secondKey: 'declared', swap: false };
+		// Determine which comes first in the text
+		const inferredPos = input.search(/\binferred\s+(return\s+)?type\b/i);
+		const declaredPos = input.search(/\bdeclared\s+(return\s+)?type\b/i);
+
+		if (inferredPos < declaredPos) {
+			return { firstKey: 'inferred', secondKey: 'declared', swap: false };
+		} else {
+			return { firstKey: 'declared', secondKey: 'inferred', swap: false };
+		}
 	}
 
 	// Check for "expects" and "provided" pattern
@@ -611,6 +618,17 @@ runTest('Null vs undefined handling in declared', () => {
 			"got": "null|string",
 		}
 	}, 'Should use declared and got as field names');
+});
+
+runTest('Null vs undefined handling in declared', () => {
+	const input = "The declared return type 'list<array{added?: string}>}' for Sturents\\Routes\\Page\\Mobile\\PaymentsNew::paymentsAndDatesFromRent is more specific than the inferred return type 'list<array{added: null|string}>}'";
+	const differences = findDifferences(input);
+	assertEquals(differences, {
+		"added": {
+			"declared": "undefined|string",
+			"inferred": "null|string",
+		}
+	}, 'Should use declared and inferred as field names');
 });
 
 // ============================================================================

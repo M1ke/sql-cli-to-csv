@@ -146,19 +146,26 @@
 	}
 
 	function detectKeyNames(input) {
-		// Check for "declared" and "got" pattern (must check before inferred/declared)
 		const declaredMatch = /\bdeclared\s+(return\s+)?type\b/i.test(input);
+		const inferredMatch = /\binferred\s+(return\s+)?type\b/i.test(input);
 		const gotMatch = /\bgot\s+['"]?list</i.test(input);
 
-		if (declaredMatch && gotMatch) {
+		// Check for "declared" and "got" pattern
+		if (declaredMatch && gotMatch && !inferredMatch) {
 			return { firstKey: 'declared', secondKey: 'got', swap: false };
 		}
 
-		// Check for "inferred" and "declared" pattern
-		const inferredMatch = /\binferred\s+type\b/i.test(input);
-
+		// Check for "inferred" and "declared" pattern (both orderings)
 		if (inferredMatch && declaredMatch) {
-			return { firstKey: 'inferred', secondKey: 'declared', swap: false };
+			// Determine which comes first in the text
+			const inferredPos = input.search(/\binferred\s+(return\s+)?type\b/i);
+			const declaredPos = input.search(/\bdeclared\s+(return\s+)?type\b/i);
+
+			if (inferredPos < declaredPos) {
+				return { firstKey: 'inferred', secondKey: 'declared', swap: false };
+			} else {
+				return { firstKey: 'declared', secondKey: 'inferred', swap: false };
+			}
 		}
 
 		// Check for "expects" and "provided" pattern
