@@ -119,6 +119,27 @@ function findTypeEnd(content, start) {
 	return pos;
 }
 
+function detectKeyNames(input) {
+	// Check for "inferred" and "declared" pattern
+	const inferredMatch = /\binferred\s+type\b/i.test(input);
+	const declaredMatch = /\bdeclared\s+(return\s+)?type\b/i.test(input);
+
+	if (inferredMatch && declaredMatch) {
+		return { firstKey: 'inferred', secondKey: 'declared', swap: true };
+	}
+
+	// Check for "expects" and "provided" pattern
+	const expectsMatch = /\bexpects\s+array\{/i.test(input);
+	const providedMatch = /\barray\{[^}]*\}\s+provided\b/i.test(input) || /\bprovided\b/i.test(input);
+
+	if (expectsMatch && providedMatch) {
+		return { firstKey: 'expects', secondKey: 'provided', swap: false };
+	}
+
+	// Default to first/second
+	return { firstKey: 'first', secondKey: 'second', swap: false };
+}
+
 function findDifferences(input){
 	const shapes = extractArrayShapes(input);
 
@@ -127,10 +148,16 @@ function findDifferences(input){
 		return;
 	}
 
-	const shape1 = parseArrayShape(shapes[0]);
-	const shape2 = parseArrayShape(shapes[1]);
+	const keyNames = detectKeyNames(input);
+	let shape1 = parseArrayShape(shapes[0]);
+	let shape2 = parseArrayShape(shapes[1]);
 
-	return compareArrayShapes(shape1, shape2);
+	// Swap shapes if needed (e.g., for inferred/declared pattern)
+	if (keyNames.swap) {
+		[shape1, shape2] = [shape2, shape1];
+	}
+
+	return compareArrayShapes(shape1, shape2, keyNames);
 }
 
 function extractNestedArrayShape(typeStr) {
@@ -199,7 +226,7 @@ function extractNestedArrayShape(typeStr) {
 	return null;
 }
 
-function compareArrayShapes(shape1, shape2) {
+function compareArrayShapes(shape1, shape2, keyNames = {firstKey: 'first', secondKey: 'second'}) {
 	const differences = {};
 	const allKeys = new Set([...Object.keys(shape1), ...Object.keys(shape2)]);
 
@@ -209,13 +236,13 @@ function compareArrayShapes(shape1, shape2) {
 
 		if (type1 === undefined) {
 			differences[key] = {
-				first: null,
-				second: type2
+				[keyNames.firstKey]: null,
+				[keyNames.secondKey]: type2
 			};
 		} else if (type2 === undefined) {
 			differences[key] = {
-				first: type1,
-				second: null
+				[keyNames.firstKey]: type1,
+				[keyNames.secondKey]: null
 			};
 		} else if (type1 !== type2) {
 			// Check if both types contain nested array shapes
@@ -226,15 +253,15 @@ function compareArrayShapes(shape1, shape2) {
 				// Both have nested array shapes - compare them
 				const nestedShape1 = parseArrayShape(nested1.nestedShape);
 				const nestedShape2 = parseArrayShape(nested2.nestedShape);
-				const nestedDifferences = compareArrayShapes(nestedShape1, nestedShape2);
+				const nestedDifferences = compareArrayShapes(nestedShape1, nestedShape2, keyNames);
 
 				const result = {};
 
 				// Show container type difference if they differ
 				if (nested1.containerType !== nested2.containerType) {
 					result.containerType = {
-						first: nested1.containerType,
-						second: nested2.containerType
+						[keyNames.firstKey]: nested1.containerType,
+						[keyNames.secondKey]: nested2.containerType
 					};
 				}
 
@@ -245,8 +272,8 @@ function compareArrayShapes(shape1, shape2) {
 			} else {
 				// Simple type difference
 				differences[key] = {
-					first: type1,
-					second: type2
+					[keyNames.firstKey]: type1,
+					[keyNames.secondKey]: type2
 				};
 			}
 		}
