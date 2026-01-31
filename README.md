@@ -10,6 +10,9 @@ Transform CSV data using AI-generated JavaScript functions without uploading you
 ### [JWT Parser and Editor](https://m1ke.github.io/tools/jwt.html)
 Decode JWT tokens, edit header and payload sections, and reconstruct tokens with modified values.
 
+### [Markdown to Google Doc](https://m1ke.github.io/tools/markdown-gdoc.html)
+Convert markdown to formatted content that can be pasted directly into Google Docs with preserved formatting.
+
 ### [SQL CLI to CSV Converter](https://m1ke.github.io/tools/sql-csv.html)
 Convert SQL command-line table output into CSV format, extract specific columns, and wrap values with custom templates.
 
