@@ -54,8 +54,13 @@
 				<h3>Signature Verification</h3>
 				<div id="jkuDisplay" class="hidden">
 					<p><strong>JWKS URL found in header:</strong> <code id="jkuUrl"></code></p>
-					<button id="verifyBtn" style="margin-top: 10px;">Fetch Key & Verify</button>
 				</div>
+				<div style="margin-top: 10px;">
+					<label for="manualJwksUrl">Or enter JWKS URL manually:</label>
+					<input type="text" id="manualJwksUrl" placeholder="https://example.com/.well-known/jwks.json"
+						style="width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box;">
+				</div>
+				<button id="verifyBtn" style="margin-top: 10px;">Fetch Key & Verify</button>
 				<div id="verificationResult" class="hidden"
 					style="margin-top: 10px; padding: 10px; border-radius: 4px;"></div>
 			</div>
@@ -77,6 +82,7 @@
 		const verificationSection = document.getElementById('verificationSection');
 		const jkuDisplay = document.getElementById('jkuDisplay');
 		const jkuUrlEl = document.getElementById('jkuUrl');
+		const manualJwksUrlEl = document.getElementById('manualJwksUrl');
 		const verifyBtn = document.getElementById('verifyBtn');
 		const verificationResult = document.getElementById('verificationResult');
 
@@ -170,13 +176,14 @@
 				signatureEl.value = decoded.signature;
 
 				const headerObj = JSON.parse(decoded.header);
+				verificationSection.classList.remove('hidden');
+				verificationResult.classList.add('hidden');
+
 				if (headerObj.jku) {
-					verificationSection.classList.remove('hidden');
 					jkuDisplay.classList.remove('hidden');
 					jkuUrlEl.textContent = headerObj.jku;
-					verificationResult.classList.add('hidden');
 				} else {
-					verificationSection.classList.add('hidden');
+					jkuDisplay.classList.add('hidden');
 				}
 
 
@@ -193,23 +200,36 @@
 
 		verifyBtn.addEventListener('click', async () => {
 			const jwt = inputEl.value.trim();
+			const manualUrl = manualJwksUrlEl.value.trim();
 			const jku = jkuUrlEl.textContent;
 
-			verificationResult.textContent = 'Fetching keys and verifying...';
+			// Determine which URL to use
+			const jwksUrl = manualUrl || jku;
+			const urlSource = manualUrl ? 'manual input' : 'header jku field';
+
+			if (!jwksUrl) {
+				verificationResult.textContent = '❌ No JWKS URL available. Either enter one manually or use a JWT with a jku field in the header.';
+				verificationResult.style.backgroundColor = '#ffebee';
+				verificationResult.style.color = '#c62828';
+				verificationResult.classList.remove('hidden');
+				return;
+			}
+
+			verificationResult.textContent = `Fetching keys from ${urlSource} and verifying...`;
 			verificationResult.className = 'hidden';
 			verificationResult.style.backgroundColor = '#e3f2fd';
 			verificationResult.style.color = '#1565c0';
 			verificationResult.classList.remove('hidden');
 
 			try {
-				const JWKS = jose.createRemoteJWKSet(new URL(jku));
+				const JWKS = jose.createRemoteJWKSet(new URL(jwksUrl));
 				const { payload, protectedHeader } = await jose.jwtVerify(jwt, JWKS);
 
-				verificationResult.textContent = '✅ Signature Verified!';
+				verificationResult.textContent = `✅ Signature Verified! (using ${urlSource})`;
 				verificationResult.style.backgroundColor = '#e8f5e9';
 				verificationResult.style.color = '#2e7d32';
 			} catch (e) {
-				verificationResult.textContent = '❌ Verification Failed: ' + e.message;
+				verificationResult.textContent = `❌ Verification Failed: ${e.message} (tried ${urlSource})`;
 				verificationResult.style.backgroundColor = '#ffebee';
 				verificationResult.style.color = '#c62828';
 			}
