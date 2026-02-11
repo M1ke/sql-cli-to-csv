@@ -10,6 +10,9 @@ Transform CSV data using AI-generated JavaScript functions without uploading you
 ### [JWT Parser and Editor](https://m1ke.github.io/tools/jwt.html)
 Decode JWT tokens, edit header and payload sections, and reconstruct tokens with modified values.
 
+### [DNS Lookup Tool](https://m1ke.github.io/tools/dns-lookup.html)
+Query DNS records for any domain using DNS-over-HTTPS. Supports A, AAAA, MX, TXT, NS, CNAME, SOA, PTR, CAA, and SRV record types.
+
 ### [Markdown to Google Doc](https://m1ke.github.io/tools/markdown-gdoc.html)
 Convert markdown to formatted content that can be pasted directly into Google Docs with preserved formatting.
 

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNS Lookup Tool</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <a href="index.html" class="home-link">Back to Home</a>
+  <h1>DNS Lookup Tool</h1>
+  <p class="subtitle">Query DNS records for any domain using DNS-over-HTTPS</p>
+
+  <div class="section">
+    <label for="domain">Domain Name:</label>
+    <input type="text" id="domain" placeholder="example.com" />
+  </div>
+
+  <div class="section">
+    <label for="recordType">Record Type:</label>
+    <select id="recordType">
+      <option value="A">A - IPv4 Address</option>
+      <option value="AAAA">AAAA - IPv6 Address</option>
+      <option value="MX">MX - Mail Exchange</option>
+      <option value="TXT">TXT - Text Records</option>
+      <option value="NS">NS - Name Servers</option>
+      <option value="CNAME">CNAME - Canonical Name</option>
+      <option value="SOA">SOA - Start of Authority</option>
+      <option value="PTR">PTR - Pointer Record</option>
+      <option value="CAA">CAA - Certification Authority Authorization</option>
+      <option value="SRV">SRV - Service Record</option>
+    </select>
+  </div>
+
+  <div class="section">
+    <button id="lookupBtn">Lookup DNS Records</button>
+  </div>
+
+  <div id="errorSection" class="section hidden">
+    <div id="error" class="error visible"></div>
+  </div>
+
+  <div id="resultsSection" class="section hidden">
+    <h3>Results:</h3>
+    <div id="results"></div>
+  </div>
+
+  <div class="section">
+    <h3>Example Usage:</h3>
+    <p>Enter a domain name (e.g., <code>google.com</code>) and select a record type to query. The tool uses Google's DNS-over-HTTPS API to fetch DNS records.</p>
+    <ul style="color: #555; font-size: 14px; line-height: 1.6; margin-left: 20px;">
+      <li><strong>A</strong> - Returns IPv4 addresses</li>
+      <li><strong>AAAA</strong> - Returns IPv6 addresses</li>
+      <li><strong>MX</strong> - Returns mail server records</li>
+      <li><strong>TXT</strong> - Returns text records (SPF, DKIM, etc.)</li>
+      <li><strong>NS</strong> - Returns authoritative name servers</li>
+      <li><strong>CNAME</strong> - Returns canonical name aliases</li>
+    </ul>
+  </div>
+
+  <p><em>All processing for this is done in your browser; no data is sent to any remote server (except the DNS-over-HTTPS query to Google's public DNS API)</em></p>
+</div>
+
+<script>
+  const domainInput = document.getElementById('domain');
+  const recordTypeSelect = document.getElementById('recordType');
+  const lookupBtn = document.getElementById('lookupBtn');
+  const errorSection = document.getElementById('errorSection');
+  const errorDiv = document.getElementById('error');
+  const resultsSection = document.getElementById('resultsSection');
+  const resultsDiv = document.getElementById('results');
+
+  // DNS record type codes (for Google DNS API)
+  const recordTypes = {
+    'A': 1,
+    'NS': 2,
+    'CNAME': 5,
+    'SOA': 6,
+    'PTR': 12,
+    'MX': 15,
+    'TXT': 16,
+    'AAAA': 28,
+    'SRV': 33,
+    'CAA': 257
+  };
+
+  lookupBtn.addEventListener('click', async () => {
+    const domain = domainInput.value.trim();
+    const recordType = recordTypeSelect.value;
+
+    // Hide previous results and errors
+    errorSection.classList.add('hidden');
+    resultsSection.classList.add('hidden');
+    errorDiv.textContent = '';
+    resultsDiv.innerHTML = '';
+
+    // Validate input
+    if (!domain) {
+      showError('Please enter a domain name');
+      return;
+    }
+
+    // Basic domain validation
+    const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+    if (!domainRegex.test(domain)) {
+      showError('Invalid domain name format');
+      return;
+    }
+
+    // Perform DNS lookup
+    lookupBtn.disabled = true;
+    lookupBtn.textContent = 'Looking up...';
+
+    try {
+      const typeCode = recordTypes[recordType];
+      const url = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${typeCode}`;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.Status !== 0) {
+        const statusMessages = {
+          1: 'Format Error - The DNS server was unable to interpret the query',
+          2: 'Server Failure - The DNS server encountered an internal error',
+          3: 'Name Error - The domain name does not exist',
+          4: 'Not Implemented - The DNS server does not support this query type',
+          5: 'Refused - The DNS server refused to answer the query'
+        };
+        const errorMessage = statusMessages[data.Status] || `DNS query failed with status code ${data.Status}`;
+        showError(errorMessage);
+        return;
+      }
+
+      if (!data.Answer || data.Answer.length === 0) {
+        showError(`No ${recordType} records found for ${domain}`);
+        return;
+      }
+
+      displayResults(data, recordType, domain);
+    } catch (error) {
+      showError(`Error performing DNS lookup: ${error.message}`);
+    } finally {
+      lookupBtn.disabled = false;
+      lookupBtn.textContent = 'Lookup DNS Records';
+    }
+  });
+
+  // Allow Enter key to trigger lookup
+  domainInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      lookupBtn.click();
+    }
+  });
+
+  function showError(message) {
+    errorDiv.textContent = message;
+    errorSection.classList.remove('hidden');
+  }
+
+  function displayResults(data, recordType, domain) {
+    let html = `<div style="background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px;">`;
+    html += `<p style="margin-bottom: 10px; color: #555;"><strong>Query:</strong> ${domain} (${recordType})</p>`;
+    html += `<p style="margin-bottom: 15px; color: #555;"><strong>Records found:</strong> ${data.Answer.length}</p>`;
+
+    data.Answer.forEach((record, index) => {
+      html += `<div style="background: white; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; margin-bottom: 10px;">`;
+      html += `<p style="margin-bottom: 5px; color: #333; font-weight: 600;">Record ${index + 1}:</p>`;
+
+      // Format the record data based on type
+      const recordData = formatRecordData(record, recordType);
+      html += `<pre style="background: #f8f9fa; border: 1px solid #e0e0e0; padding: 10px; border-radius: 4px; font-size: 13px; margin: 0; white-space: pre-wrap; word-wrap: break-word;">${recordData}</pre>`;
+
+      html += `</div>`;
+    });
+
+    html += `</div>`;
+    resultsDiv.innerHTML = html;
+    resultsSection.classList.remove('hidden');
+  }
+
+  function formatRecordData(record, recordType) {
+    let output = '';
+
+    // Common fields
+    output += `Name: ${record.name}\n`;
+    output += `Type: ${record.type}\n`;
+    output += `TTL: ${record.TTL} seconds\n`;
+
+    // Type-specific formatting
+    switch (recordType) {
+      case 'A':
+      case 'AAAA':
+        output += `IP Address: ${record.data}`;
+        break;
+
+      case 'MX':
+        // MX records have priority and mail server
+        const mxParts = record.data.split(' ');
+        if (mxParts.length >= 2) {
+          output += `Priority: ${mxParts[0]}\n`;
+          output += `Mail Server: ${mxParts.slice(1).join(' ')}`;
+        } else {
+          output += `Data: ${record.data}`;
+        }
+        break;
+
+      case 'TXT':
+        // TXT records can be long, so format them nicely
+        output += `Text: ${record.data}`;
+        break;
+
+      case 'NS':
+        output += `Name Server: ${record.data}`;
+        break;
+
+      case 'CNAME':
+        output += `Canonical Name: ${record.data}`;
+        break;
+
+      case 'SOA':
+        // SOA records have multiple space-separated fields
+        const soaParts = record.data.split(' ');
+        if (soaParts.length >= 7) {
+          output += `Primary NS: ${soaParts[0]}\n`;
+          output += `Responsible: ${soaParts[1]}\n`;
+          output += `Serial: ${soaParts[2]}\n`;
+          output += `Refresh: ${soaParts[3]}\n`;
+          output += `Retry: ${soaParts[4]}\n`;
+          output += `Expire: ${soaParts[5]}\n`;
+          output += `Minimum: ${soaParts[6]}`;
+        } else {
+          output += `Data: ${record.data}`;
+        }
+        break;
+
+      case 'CAA':
+        output += `Data: ${record.data}`;
+        break;
+
+      case 'SRV':
+        // SRV records: priority weight port target
+        const srvParts = record.data.split(' ');
+        if (srvParts.length >= 4) {
+          output += `Priority: ${srvParts[0]}\n`;
+          output += `Weight: ${srvParts[1]}\n`;
+          output += `Port: ${srvParts[2]}\n`;
+          output += `Target: ${srvParts[3]}`;
+        } else {
+          output += `Data: ${record.data}`;
+        }
+        break;
+
+      case 'PTR':
+        output += `Pointer: ${record.data}`;
+        break;
+
+      default:
+        output += `Data: ${record.data}`;
+    }
+
+    return output;
+  }
+</script>
+
+<style>
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-size: 14px;
+    transition: border-color 0.3s;
+    cursor: pointer;
+    background: white;
+  }
+
+  select:focus {
+    outline: none;
+    border-color: #667eea;
+  }
+
+  code {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+  }
+</style>
+
+</body>
+</html>
