@@ -8,10 +8,11 @@ This is a suite of client-side browser-based developer tools, hosted on GitHub P
 
 ## Architecture
 
-**Single-File Design Pattern**: Each tool is a standalone HTML file containing:
+**Single-File Design Pattern**: Each tool is typically a standalone HTML file containing:
 - Inline CSS in `<style>` tags for styling
 - Vanilla JavaScript in `<script>` tags for functionality
-- No external dependencies or frameworks
+- No external dependencies or frameworks (with rare exceptions noted in tool descriptions)
+- Exception: Some tools may extract logic into separate `.js` files when shared with test files to prevent code duplication (e.g., `psalm-compare.js`)
 
 **Data Privacy**: A core principle is that no data leaves the user's browser. Each tool includes a notice at the bottom of the page stating "All processing for this is done in your browser; no data is sent to any remote server."
 
@@ -25,11 +26,28 @@ Transforms CSV data using AI-generated JavaScript functions without uploading da
 - Transformation executes locally in browser
 - Multi-step workflow with visual feedback
 
+### dns-lookup.html - DNS Lookup Tool
+Queries DNS records for any domain using DNS-over-HTTPS (Google's public DNS API).
+- Supports multiple record types: A, AAAA, MX, TXT, NS, CNAME, SOA, PTR, CAA, SRV
+- Real-time DNS queries with formatted results
+- Displays TTL, record type, and type-specific data (e.g., MX priority, SOA fields)
+- Includes basic domain validation
+- Note: This tool does make external requests to Google's DNS API, but no user data is stored
+
 ### jwt.html - JWT Parser and Editor
 Decodes JWT tokens into header/payload/signature components, allows editing, and reconstructs tokens.
 - Uses base64url encoding/decoding functions
 - Real-time validation with error messages
 - Does NOT sign tokens (user must provide signatures)
+
+### markdown-gdoc.html - Markdown to Google Doc Converter
+Converts markdown to formatted HTML that can be pasted directly into Google Docs with preserved formatting.
+- Real-time preview of formatted markdown
+- Copy to clipboard as rich HTML (works in modern browsers)
+- Uses marked.js library for markdown parsing
+- Supports standard markdown: headings, lists, code blocks, tables, bold, italic, links, etc.
+- Includes styling optimized for Google Docs compatibility
+- Note: This tool loads the marked.js library from a CDN (exception to the no-dependencies rule)
 
 ### psalm-compare.html - Psalm Array Type Comparator
 Compares two Psalm array type definitions from error messages and shows only the differences.
@@ -38,6 +56,7 @@ Compares two Psalm array type definitions from error messages and shows only the
 - Handles commas within type definitions and sub-types
 - Outputs JSON showing keys that differ or exist in only one array
 - Example output: `{"role": {"first": "array<array-key, mixed>", "second": "list<string>"}}`
+- Note: Core logic is in `psalm-compare.js` (shared with `psalm-compare.test.js`) to prevent code drift
 
 ### sql-csv.html - SQL CLI to CSV Converter
 Converts SQL CLI table output (the ASCII art format with `+--+` borders) into CSV format.
@@ -56,6 +75,9 @@ Converts SQL `SELECT ... \G` output (vertical format) into INSERT statements.
 - Requires table name input
 - Optional "skip empty" checkbox to exclude null/zero/empty date values
 - Handles field escaping and type detection (numeric vs string)
+
+### tech-debt-generator.html - Tech Debt Generator
+Silly project to demonstrate Claude Code's ability to generate randomized code snippets, no real benefit to users.
 
 ## Development Guidelines
 
