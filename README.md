@@ -16,6 +16,9 @@ Query DNS records for any domain using DNS-over-HTTPS. Supports A, AAAA, MX, TXT
 ### [Markdown to Google Doc](https://m1ke.github.io/tools/markdown-gdoc.html)
 Convert markdown to formatted content that can be pasted directly into Google Docs with preserved formatting.
 
+### [Word Count Tool](https://m1ke.github.io/tools/word-count.html)
+Count words in text with support for ignoring content within square brackets and treating numbers as words.
+
 ### [SQL CLI to CSV Converter](https://m1ke.github.io/tools/sql-csv.html)
 Convert SQL command-line table output into CSV format, extract specific columns, and wrap values with custom templates.
 
