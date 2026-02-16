@@ -4,37 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Word Count Tool</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            line-height: 1.6;
-        }
-        h1 {
-            color: #333;
-        }
-        textarea {
-            width: 100%;
-            min-height: 200px;
-            padding: 10px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            font-family: monospace;
-        }
         .result {
-            margin-top: 20px;
             padding: 15px;
             background-color: #f0f0f0;
-            border-radius: 4px;
+            border-radius: 8px;
             font-size: 18px;
-            font-weight: bold;
         }
         .example {
-            margin-top: 30px;
             padding: 15px;
             background-color: #fff3cd;
             border-left: 4px solid #ffc107;
@@ -50,44 +28,39 @@
             border-radius: 4px;
             margin: 10px 0;
         }
-        .privacy {
-            margin-top: 40px;
-            padding: 10px;
-            background-color: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            font-size: 14px;
-            color: #666;
-        }
     </style>
 </head>
 <body>
-    <h1>Word Count Tool</h1>
+    <div class="container">
+        <a href="index.html" class="home-link">Back to Home</a>
+        <h1>Word Count Tool</h1>
+        <p class="subtitle">Paste your text below to count words. Text inside [square brackets] will be ignored.</p>
 
-    <p>Paste your text below to count words. Text inside [square brackets] will be ignored.</p>
+        <div class="section">
+            <label for="textInput">Text to count:</label>
+            <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+        </div>
 
-    <textarea id="textInput" placeholder="Paste your text here..."></textarea>
+        <div class="section result">
+            <strong>Word Count:</strong> <span id="wordCount">0</span>
+        </div>
 
-    <div class="result">
-        Word Count: <span id="wordCount">0</span>
-    </div>
+        <div class="section example">
+            <h3>Examples</h3>
+            <p><strong>Input:</strong></p>
+            <div class="example-text">This is platform 13</div>
+            <p><strong>Result:</strong> 4 words (each word and number counts as one word)</p>
 
-    <div class="example">
-        <h3>Examples</h3>
-        <p><strong>Input:</strong></p>
-        <div class="example-text">This is platform 13</div>
-        <p><strong>Result:</strong> 4 words (each word and number counts as one word)</p>
+            <p><strong>Input:</strong></p>
+            <div class="example-text">This [ignore me] is a test</div>
+            <p><strong>Result:</strong> 4 words (text in brackets is ignored)</p>
 
-        <p><strong>Input:</strong></p>
-        <div class="example-text">This [ignore me] is a test</div>
-        <p><strong>Result:</strong> 4 words (text in brackets is ignored)</p>
+            <p><strong>Input:</strong></p>
+            <div class="example-text">The price is [approximately] 42 dollars</div>
+            <p><strong>Result:</strong> 5 words</p>
+        </div>
 
-        <p><strong>Input:</strong></p>
-        <div class="example-text">The price is [approximately] 42 dollars</div>
-        <p><strong>Result:</strong> 5 words</p>
-    </div>
-
-    <div class="privacy">
-        All processing for this is done in your browser; no data is sent to any remote server.
+        <p><em>All processing for this is done in your browser; no data is sent to any remote server</em></p>
     </div>
 
     <script>
