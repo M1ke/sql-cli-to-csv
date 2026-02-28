@@ -31,6 +31,7 @@
       <option value="CAA">CAA - Certification Authority Authorization</option>
       <option value="SRV">SRV - Service Record</option>
     </select>
+    <div id="recordTypeInfo" class="record-type-info"></div>
   </div>
 
   <div class="section">
@@ -50,12 +51,16 @@
     <h3>Example Usage:</h3>
     <p>Enter a domain name (e.g., <code>google.com</code>) and select a record type to query. The tool uses Google's DNS-over-HTTPS API to fetch DNS records.</p>
     <ul style="color: #555; font-size: 14px; line-height: 1.6; margin-left: 20px;">
-      <li><strong>A</strong> - Returns IPv4 addresses</li>
-      <li><strong>AAAA</strong> - Returns IPv6 addresses</li>
-      <li><strong>MX</strong> - Returns mail server records</li>
-      <li><strong>TXT</strong> - Returns text records (SPF, DKIM, etc.)</li>
-      <li><strong>NS</strong> - Returns authoritative name servers</li>
-      <li><strong>CNAME</strong> - Returns canonical name aliases</li>
+      <li><strong>A</strong> - Maps a domain to an IPv4 address. The most common DNS record type.</li>
+      <li><strong>AAAA</strong> - Maps a domain to an IPv6 address.</li>
+      <li><strong>MX</strong> - Specifies the mail server for the domain, with a priority value (lower = higher priority).</li>
+      <li><strong>TXT</strong> - Stores arbitrary text; used for SPF, DKIM, domain ownership verification, and more.</li>
+      <li><strong>NS</strong> - Identifies the authoritative name servers for the domain.</li>
+      <li><strong>CNAME</strong> - Creates an alias pointing to another domain name (canonical name).</li>
+      <li><strong>SOA</strong> - Holds zone administration data: primary name server, contact address, and serial number.</li>
+      <li><strong>PTR</strong> - Reverse DNS lookup; maps an IP address back to a domain name.</li>
+      <li><strong>CAA</strong> - Restricts which Certificate Authorities may issue SSL/TLS certificates for the domain.</li>
+      <li><strong>SRV</strong> - Specifies the host and port for a specific service (e.g., SIP, XMPP).</li>
     </ul>
   </div>
 
@@ -63,9 +68,30 @@
 </div>
 
 <script>
+  const recordTypeDescriptions = {
+    'A':    'Maps a domain name to an IPv4 address. The most common DNS record type.',
+    'AAAA': 'Maps a domain name to an IPv6 address.',
+    'MX':   'Specifies the mail server responsible for accepting email for the domain. Includes a priority value (lower number = higher priority).',
+    'TXT':  'Stores arbitrary text data. Used for SPF and DKIM email authentication, domain ownership verification, and more.',
+    'NS':   'Identifies the authoritative name servers for the domain — the servers that hold the definitive DNS records.',
+    'CNAME':'Creates an alias from one domain name to another (the canonical name). The alias resolves to whatever the canonical name resolves to.',
+    'SOA':  'Start of Authority — contains zone administration data including the primary name server, responsible contact address, and serial number used to track zone changes.',
+    'PTR':  'Reverse DNS lookup; maps an IP address back to a domain name. Commonly used to verify the identity of mail servers.',
+    'CAA':  'Certification Authority Authorization — specifies which Certificate Authorities (CAs) are permitted to issue SSL/TLS certificates for the domain.',
+    'SRV':  'Service record — specifies the hostname and port for a specific service (e.g., SIP, XMPP). Includes priority, weight, port, and target fields.',
+  };
+
   const domainInput = document.getElementById('domain');
   const recordTypeSelect = document.getElementById('recordType');
+  const recordTypeInfo = document.getElementById('recordTypeInfo');
   const lookupBtn = document.getElementById('lookupBtn');
+
+  function updateRecordTypeInfo() {
+    recordTypeInfo.textContent = recordTypeDescriptions[recordTypeSelect.value] || '';
+  }
+
+  recordTypeSelect.addEventListener('change', updateRecordTypeInfo);
+  updateRecordTypeInfo();
   const errorSection = document.getElementById('errorSection');
   const errorDiv = document.getElementById('error');
   const resultsSection = document.getElementById('resultsSection');
@@ -279,6 +305,17 @@
   select:focus {
     outline: none;
     border-color: #667eea;
+  }
+
+  .record-type-info {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #f0f4ff;
+    border-left: 3px solid #667eea;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    color: #444;
+    line-height: 1.5;
   }
 
   code {
