@@ -96,7 +96,7 @@
             <p><strong>Result:</strong> Three colour swatches shown for <code>#667eea</code>, <code>#333</code>, and <code>rgba(0, 0, 0, 0.15)</code></p>
 
             <p><strong>Supported formats:</strong></p>
-            <div class="example-text">#fff &nbsp; #cfcfcf &nbsp; #aabbccdd &nbsp; rgb(255, 128, 0) &nbsp; rgba(0,0,0,0.5) &nbsp; hsl(200, 50%, 60%) &nbsp; hsla(120, 100%, 50%, 0.8)</div>
+            <div class="example-text">#fff &nbsp; #cfcfcf &nbsp; cfcfcf &nbsp; #aabbccdd &nbsp; rgb(255, 128, 0) &nbsp; rgba(0,0,0,0.5) &nbsp; hsl(200, 50%, 60%) &nbsp; hsla(120, 100%, 50%, 0.8)</div>
         </div>
 
         <p><em>All processing for this is done in your browser; no data is sent to any remote server</em></p>
@@ -112,6 +112,7 @@
             /#[0-9a-fA-F]{6}\b/g,
             /#[0-9a-fA-F]{4}\b/g,
             /#[0-9a-fA-F]{3}\b/g,
+            /(?<![#0-9a-fA-F])[0-9a-fA-F]{6}(?![0-9a-fA-F])/g,
             /rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(?:,\s*(?:0|1|0?\.\d+))?\s*\)/gi,
             /hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%\s*(?:,\s*(?:0|1|0?\.\d+))?\s*\)/gi,
         ];
