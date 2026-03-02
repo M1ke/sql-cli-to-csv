@@ -19,6 +19,9 @@ Convert markdown to formatted content that can be pasted directly into Google Do
 ### [Word Count Tool](https://m1ke.github.io/tools/word-count.html)
 Count words in text with support for ignoring content within square brackets and treating numbers as words.
 
+### [CSS Colour Extractor](https://m1ke.github.io/tools/css-colours.html)
+Paste any text containing CSS colour values and get a visual list with colour swatches. Supports hex, rgb/rgba, and hsl/hsla formats.
+
 ### [SQL CLI to CSV Converter](https://m1ke.github.io/tools/sql-csv.html)
 Convert SQL command-line table output into CSV format, extract specific columns, and wrap values with custom templates.
 
