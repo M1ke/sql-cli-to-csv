@@ -143,12 +143,14 @@
                 return;
             }
 
-            colourList.innerHTML = colours.map(colour => `
+            colourList.innerHTML = colours.map(colour => {
+                const cssValue = /^[0-9a-fA-F]{6}$/.test(colour) ? `#${colour}` : colour;
+                return `
                 <div class="colour-item">
-                    <div class="colour-swatch" style="background-color: ${colour};"></div>
+                    <div class="colour-swatch" style="background-color: ${cssValue};"></div>
                     <span class="colour-value">${colour}</span>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         textInput.addEventListener('input', function () {
