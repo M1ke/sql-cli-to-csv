@@ -6,11 +6,38 @@
   <title>JSON Editor</title>
   <link rel="stylesheet" href="style.css">
   <style>
+    .editor-wrap {
+      display: flex;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .editor-wrap:focus-within { border-color: #667eea; }
+    #lineNumbers {
+      background: #f0f0f0;
+      color: #bbb;
+      padding: 10px 8px;
+      text-align: right;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      user-select: none;
+      overflow: hidden;
+      min-width: 36px;
+      border-right: 1px solid #e0e0e0;
+    }
     #jsonInput {
       min-height: 300px;
       font-family: 'Courier New', Courier, monospace;
       font-size: 13px;
+      line-height: 1.5;
+      flex: 1;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
     }
+    #jsonInput:focus { border-color: transparent; outline: none; box-shadow: none; }
     .schema-error-item {
       padding: 4px 0;
       border-bottom: 1px solid #ffcdd2;
@@ -89,7 +116,10 @@
 
   <div class="section">
     <label for="jsonInput">JSON</label>
-    <textarea id="jsonInput" placeholder='{"key": "value"}'></textarea>
+    <div class="editor-wrap">
+      <div id="lineNumbers" aria-hidden="true"><div>1</div></div>
+      <textarea id="jsonInput" placeholder='{"key": "value"}'></textarea>
+    </div>
     <div id="lintError" class="error hidden"></div>
     <div id="schemaErrors" class="hidden"></div>
   </div>
@@ -127,6 +157,7 @@
   const fetchSchemaBtn = document.getElementById('fetchSchemaBtn');
   const schemaStatus = document.getElementById('schemaStatus');
   const jsonInput = document.getElementById('jsonInput');
+  const lineNumbers = document.getElementById('lineNumbers');
   const lintError = document.getElementById('lintError');
   const schemaErrorsEl = document.getElementById('schemaErrors');
   const savedList = document.getElementById('savedList');
@@ -135,11 +166,31 @@
   let currentSchema = null;
   let preventNextEnter = false;
 
+  // --- Line numbers ---
+
+  const updateLineNumbers = () => {
+    const count = (jsonInput.value.match(/\n/g) || []).length + 1;
+    const existing = lineNumbers.children.length;
+    if (count > existing) {
+      for (let i = existing + 1; i <= count; i++) {
+        const d = document.createElement('div');
+        d.textContent = i;
+        lineNumbers.appendChild(d);
+      }
+    } else {
+      while (lineNumbers.children.length > count) lineNumbers.removeChild(lineNumbers.lastChild);
+    }
+    lineNumbers.scrollTop = jsonInput.scrollTop;
+  };
+
+  jsonInput.addEventListener('scroll', () => { lineNumbers.scrollTop = jsonInput.scrollTop; });
+
   // --- Formatting + validation ---
 
   // Lint without reformatting — used when we've manually inserted text and don't want cursor reset
   const lintOnly = () => {
     const raw = jsonInput.value;
+    updateLineNumbers();
     if (!raw.trim()) {
       lintError.classList.add('hidden');
       schemaErrorsEl.classList.add('hidden');
@@ -159,6 +210,7 @@
   const lintAndFormat = () => {
     const raw = jsonInput.value;
     if (!raw.trim()) {
+      updateLineNumbers();
       lintError.classList.add('hidden');
       schemaErrorsEl.classList.add('hidden');
       return;
@@ -167,8 +219,10 @@
     try {
       parsed = JSON.parse(raw);
       jsonInput.value = formatJson(raw);
+      updateLineNumbers();
       lintError.classList.add('hidden');
     } catch (e) {
+      updateLineNumbers();
       lintError.textContent = e.message;
       lintError.classList.remove('hidden');
       schemaErrorsEl.classList.add('hidden');
@@ -196,16 +250,23 @@
 
   jsonInput.addEventListener('input', lintAndFormat);
 
-  // Intercept comma: insert ,\n and place caret on the new line (no reformat, no cursor jump).
-  // Intercept Enter: block it if it would create two consecutive blank lines after a comma.
+  // Returns the leading whitespace of the line containing position pos.
+  const lineIndent = (v, pos) => {
+    const lineStart = v.lastIndexOf('\n', pos - 1) + 1;
+    return v.slice(lineStart, pos).match(/^(\s*)/)[1];
+  };
+
+  // Intercept comma: insert ,\n + current indent, place caret on the new indented line.
+  // Intercept Enter: block if it would double-blank after a comma; otherwise auto-indent.
   jsonInput.addEventListener('keydown', (e) => {
     if (e.key === ',') {
       e.preventDefault();
       const start = jsonInput.selectionStart;
-      const end = jsonInput.selectionEnd;
       const v = jsonInput.value;
-      jsonInput.value = v.slice(0, start) + ',\n' + v.slice(end);
-      jsonInput.selectionStart = jsonInput.selectionEnd = start + 2;
+      const indent = lineIndent(v, start);
+      const insertion = ',\n' + indent;
+      jsonInput.value = v.slice(0, start) + insertion + v.slice(jsonInput.selectionEnd);
+      jsonInput.selectionStart = jsonInput.selectionEnd = start + insertion.length;
       preventNextEnter = true;
       lintOnly();
       return;
@@ -214,8 +275,19 @@
     if (e.key === 'Enter') {
       if (preventNextEnter) {
         e.preventDefault();
+        preventNextEnter = false;
+        return;
       }
       preventNextEnter = false;
+      const start = jsonInput.selectionStart;
+      const v = jsonInput.value;
+      const indent = lineIndent(v, start);
+      if (indent.length > 0) {
+        e.preventDefault();
+        jsonInput.value = v.slice(0, start) + '\n' + indent + v.slice(jsonInput.selectionEnd);
+        jsonInput.selectionStart = jsonInput.selectionEnd = start + 1 + indent.length;
+        lintOnly();
+      }
       return;
     }
 
@@ -240,6 +312,7 @@
     schemaErrorsEl.classList.add('hidden');
     saveSuccess.classList.add('hidden');
     updateTitleButtons();
+    updateLineNumbers();
   });
 
   // --- Schema fetch ---
