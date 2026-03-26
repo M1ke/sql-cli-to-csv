@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Editor</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    #jsonInput {
+      min-height: 300px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+    }
+    .schema-error-item {
+      padding: 4px 0;
+      border-bottom: 1px solid #ffcdd2;
+      font-size: 13px;
+    }
+    .schema-error-item:last-child { border-bottom: none; }
+    .schema-error-path {
+      font-weight: 600;
+      color: #b71c1c;
+    }
+    #schemaErrors {
+      background: #ffebee;
+      border: 1px solid #ef9a9a;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-top: 8px;
+    }
+    .controls-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .controls-row input[type="text"] {
+      flex: 1;
+      min-width: 160px;
+    }
+    .saved-item-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .saved-item-row button.load-btn {
+      flex: 1;
+      text-align: left;
+      background: #f8f9fa;
+      color: #333;
+      border: 1px solid #e0e0e0;
+    }
+    .saved-item-row button.load-btn:hover { background: #e8eaf6; }
+    .saved-item-row button.delete-btn {
+      background: #d32f2f;
+      padding: 8px 14px;
+    }
+    .saved-item-row button.delete-btn:hover { background: #b71c1c; }
+    #schemaStatus { font-size: 13px; margin-top: 6px; }
+    #saveSuccess { font-size: 13px; margin-left: 8px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <a href="index.html" class="home-link">Back to Home</a>
+  <h1>JSON Editor</h1>
+  <p class="subtitle">Format, validate, and save JSON documents in your browser.</p>
+
+  <div class="section">
+    <label>Title <span style="color:#999;font-weight:400">(optional — required to save)</span></label>
+    <div class="controls-row">
+      <input type="text" id="titleInput" placeholder="My saved JSON" />
+      <button id="saveBtn" class="hidden">Save</button>
+      <span id="saveSuccess" class="success hidden">Saved.</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <label for="schemaUrl">JSON Schema URL <span style="color:#999;font-weight:400">(optional)</span></label>
+    <div class="controls-row">
+      <input type="text" id="schemaUrl" placeholder="https://example.com/schema.json" />
+      <button id="fetchSchemaBtn">Load Schema</button>
+    </div>
+    <div id="schemaStatus" class="hidden"></div>
+  </div>
+
+  <div class="section">
+    <label for="jsonInput">JSON</label>
+    <textarea id="jsonInput" placeholder='{"key": "value"}'></textarea>
+    <div id="lintError" class="error hidden"></div>
+    <div id="schemaErrors" class="hidden"></div>
+  </div>
+
+  <div class="section" id="savedSection">
+    <h2 style="margin-top:0;font-size:18px">Saved Items</h2>
+    <div id="savedList"></div>
+    <p id="noSaved" class="hidden" style="color:#999;font-size:13px">No saved items yet.</p>
+  </div>
+
+  <div class="section">
+    <h2 style="margin-top:0;font-size:18px">Example</h2>
+    <pre style="background:#f8f9fa;padding:12px;border-radius:6px;font-size:13px;overflow:auto">{
+  "name": "Alice",
+  "age": 30,
+  "active": true,
+  "address": {
+    "city": "London"
+  }
+}</pre>
+  </div>
+
+  <p><em>All processing for this is done in your browser; no data is sent to any remote server.</em></p>
+</div>
+
+<script src="json-editor.js"></script>
+<script>
+  const INDEX_KEY = 'json-editor-index';
+
+  const titleInput = document.getElementById('titleInput');
+  const saveBtn = document.getElementById('saveBtn');
+  const saveSuccess = document.getElementById('saveSuccess');
+  const schemaUrlInput = document.getElementById('schemaUrl');
+  const fetchSchemaBtn = document.getElementById('fetchSchemaBtn');
+  const schemaStatus = document.getElementById('schemaStatus');
+  const jsonInput = document.getElementById('jsonInput');
+  const lintError = document.getElementById('lintError');
+  const schemaErrorsEl = document.getElementById('schemaErrors');
+  const savedList = document.getElementById('savedList');
+  const noSaved = document.getElementById('noSaved');
+
+  let currentSchema = null;
+
+  // --- Formatting + validation ---
+
+  const lintAndFormat = () => {
+    const raw = jsonInput.value;
+    if (!raw.trim()) {
+      lintError.classList.add('hidden');
+      schemaErrorsEl.classList.add('hidden');
+      return;
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+      jsonInput.value = formatJson(raw);
+      lintError.classList.add('hidden');
+    } catch (e) {
+      lintError.textContent = e.message;
+      lintError.classList.remove('hidden');
+      schemaErrorsEl.classList.add('hidden');
+      return;
+    }
+    runSchemaValidation(parsed);
+  };
+
+  const runSchemaValidation = (parsed) => {
+    if (!currentSchema) {
+      schemaErrorsEl.classList.add('hidden');
+      return;
+    }
+    const errors = validateJsonSchema(parsed, currentSchema);
+    if (errors.length === 0) {
+      schemaErrorsEl.classList.add('hidden');
+      return;
+    }
+    schemaErrorsEl.innerHTML = errors.map(e => {
+      const path = e.path ? `<span class="schema-error-path">${e.path}</span>: ` : '';
+      return `<div class="schema-error-item">${path}${e.message}</div>`;
+    }).join('');
+    schemaErrorsEl.classList.remove('hidden');
+  };
+
+  jsonInput.addEventListener('input', lintAndFormat);
+
+  // --- Title controls ---
+
+  titleInput.addEventListener('input', () => {
+    const hasTitle = titleInput.value.trim().length > 0;
+    saveBtn.classList.toggle('hidden', !hasTitle);
+    saveSuccess.classList.add('hidden');
+  });
+
+  // --- Schema fetch ---
+
+  fetchSchemaBtn.addEventListener('click', async () => {
+    const url = schemaUrlInput.value.trim();
+    if (!url) return;
+
+    schemaStatus.textContent = 'Fetching schema...';
+    schemaStatus.className = '';
+    schemaStatus.classList.remove('hidden');
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      currentSchema = await res.json();
+      schemaStatus.textContent = 'Schema loaded.';
+      schemaStatus.className = 'success';
+
+      const raw = jsonInput.value.trim();
+      if (raw) {
+        try { runSchemaValidation(JSON.parse(raw)); } catch (_) {}
+      }
+    } catch (e) {
+      currentSchema = null;
+      schemaStatus.textContent = `Failed to fetch schema: ${e.message}`;
+      schemaStatus.className = 'error';
+    }
+  });
+
+  // --- Compression (browser-only, async) ---
+
+  const compressAndEncode = async (str) => {
+    const encoder = new TextEncoder();
+    const stream = new CompressionStream('deflate-raw');
+    const writer = stream.writable.getWriter();
+    writer.write(encoder.encode(str));
+    writer.close();
+    const buf = await new Response(stream.readable).arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    return btoa(String.fromCharCode(...bytes));
+  };
+
+  const decodeAndDecompress = async (encoded) => {
+    const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+    const stream = new DecompressionStream('deflate-raw');
+    const writer = stream.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    return await new Response(stream.readable).text();
+  };
+
+  // --- Index helpers ---
+
+  const getIndex = () => {
+    try { return JSON.parse(localStorage.getItem(INDEX_KEY) || '[]'); } catch (_) { return []; }
+  };
+
+  const saveIndex = (index) => localStorage.setItem(INDEX_KEY, JSON.stringify(index));
+
+  // --- Save ---
+
+  saveBtn.addEventListener('click', async () => {
+    const title = titleInput.value.trim();
+    const raw = jsonInput.value.trim();
+    if (!title || !raw) return;
+
+    let encoded;
+    try {
+      encoded = await compressAndEncode(raw);
+    } catch (_) {
+      encoded = encodeForStorage(raw);
+    }
+
+    const { key } = serializeStorage(title, encoded);
+    localStorage.setItem(key, encoded);
+    saveIndex(addToIndex(getIndex(), title));
+
+    saveSuccess.classList.remove('hidden');
+    renderSavedList();
+  });
+
+  // --- Render saved items ---
+
+  const renderSavedList = () => {
+    const index = getIndex();
+    if (index.length === 0) {
+      savedList.innerHTML = '';
+      noSaved.classList.remove('hidden');
+      return;
+    }
+    noSaved.classList.add('hidden');
+    savedList.innerHTML = index.map(title =>
+      `<div class="saved-item-row">
+        <button class="load-btn" data-title="${title}">${title}</button>
+        <button class="delete-btn" data-title="${title}">Delete</button>
+      </div>`
+    ).join('');
+  };
+
+  // --- Load / delete (event delegation) ---
+
+  savedList.addEventListener('click', async (e) => {
+    const loadBtn = e.target.closest('.load-btn');
+    const deleteBtn = e.target.closest('.delete-btn');
+
+    if (loadBtn) {
+      const title = loadBtn.dataset.title;
+      const { key } = serializeStorage(title, '');
+      const stored = localStorage.getItem(key);
+      if (!stored) return;
+
+      let json;
+      try {
+        json = await decodeAndDecompress(stored);
+      } catch (_) {
+        try {
+          json = decodeFromStorage(stored);
+        } catch (e2) {
+          lintError.textContent = `Failed to load: ${e2.message}`;
+          lintError.classList.remove('hidden');
+          return;
+        }
+      }
+
+      titleInput.value = title;
+      saveBtn.classList.remove('hidden');
+      jsonInput.value = json;
+      lintAndFormat();
+    }
+
+    if (deleteBtn) {
+      const title = deleteBtn.dataset.title;
+      const { key } = serializeStorage(title, '');
+      localStorage.removeItem(key);
+      saveIndex(removeFromIndex(getIndex(), title));
+      renderSavedList();
+    }
+  });
+
+  renderSavedList();
+</script>
+</body>
+</html>
