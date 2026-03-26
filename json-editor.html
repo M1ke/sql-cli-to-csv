@@ -73,6 +73,7 @@
     <div class="controls-row">
       <input type="text" id="titleInput" placeholder="My saved JSON" />
       <button id="saveBtn" class="hidden">Save</button>
+      <button id="newBtn" class="hidden" style="background:#555">New</button>
       <span id="saveSuccess" class="success hidden">Saved.</span>
     </div>
   </div>
@@ -120,6 +121,7 @@
 
   const titleInput = document.getElementById('titleInput');
   const saveBtn = document.getElementById('saveBtn');
+  const newBtn = document.getElementById('newBtn');
   const saveSuccess = document.getElementById('saveSuccess');
   const schemaUrlInput = document.getElementById('schemaUrl');
   const fetchSchemaBtn = document.getElementById('fetchSchemaBtn');
@@ -131,8 +133,28 @@
   const noSaved = document.getElementById('noSaved');
 
   let currentSchema = null;
+  let preventNextEnter = false;
 
   // --- Formatting + validation ---
+
+  // Lint without reformatting — used when we've manually inserted text and don't want cursor reset
+  const lintOnly = () => {
+    const raw = jsonInput.value;
+    if (!raw.trim()) {
+      lintError.classList.add('hidden');
+      schemaErrorsEl.classList.add('hidden');
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      lintError.classList.add('hidden');
+      runSchemaValidation(parsed);
+    } catch (e) {
+      lintError.textContent = e.message;
+      lintError.classList.remove('hidden');
+      schemaErrorsEl.classList.add('hidden');
+    }
+  };
 
   const lintAndFormat = () => {
     const raw = jsonInput.value;
@@ -174,12 +196,50 @@
 
   jsonInput.addEventListener('input', lintAndFormat);
 
+  // Intercept comma: insert ,\n and place caret on the new line (no reformat, no cursor jump).
+  // Intercept Enter: block it if it would create two consecutive blank lines after a comma.
+  jsonInput.addEventListener('keydown', (e) => {
+    if (e.key === ',') {
+      e.preventDefault();
+      const start = jsonInput.selectionStart;
+      const end = jsonInput.selectionEnd;
+      const v = jsonInput.value;
+      jsonInput.value = v.slice(0, start) + ',\n' + v.slice(end);
+      jsonInput.selectionStart = jsonInput.selectionEnd = start + 2;
+      preventNextEnter = true;
+      lintOnly();
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      if (preventNextEnter) {
+        e.preventDefault();
+      }
+      preventNextEnter = false;
+      return;
+    }
+
+    preventNextEnter = false;
+  });
+
   // --- Title controls ---
 
-  titleInput.addEventListener('input', () => {
+  const updateTitleButtons = () => {
     const hasTitle = titleInput.value.trim().length > 0;
     saveBtn.classList.toggle('hidden', !hasTitle);
+    newBtn.classList.toggle('hidden', !hasTitle);
+    if (!hasTitle) saveSuccess.classList.add('hidden');
+  };
+
+  titleInput.addEventListener('input', updateTitleButtons);
+
+  newBtn.addEventListener('click', () => {
+    titleInput.value = '';
+    jsonInput.value = '';
+    lintError.classList.add('hidden');
+    schemaErrorsEl.classList.add('hidden');
     saveSuccess.classList.add('hidden');
+    updateTitleButtons();
   });
 
   // --- Schema fetch ---
