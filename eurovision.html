@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eurovision Bingo</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .flags {
+      font-size: 28px;
+      text-align: center;
+      margin-bottom: 18px;
+      letter-spacing: 4px;
+      line-height: 1.6;
+    }
+
+    .bingo-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .bingo-cell {
+      background: #f0f4ff;
+      border: 2px solid #c5cff5;
+      border-radius: 10px;
+      padding: 14px 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: #333;
+      cursor: pointer;
+      user-select: none;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.4;
+      transition: background 0.2s, border-color 0.2s, transform 0.1s;
+    }
+
+    .bingo-cell:hover {
+      border-color: #667eea;
+      background: #e8edff;
+    }
+
+    .bingo-cell:active {
+      transform: scale(0.96);
+    }
+
+    .bingo-cell.marked {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-color: #764ba2;
+      color: white;
+      font-weight: 600;
+    }
+
+    .bingo-cell.marked:hover {
+      background: linear-gradient(135deg, #7a8ef5 0%, #8a5bb8 100%);
+      border-color: #8a5bb8;
+    }
+
+    .reset-btn {
+      background: #e53935;
+      display: block;
+      width: 100%;
+    }
+
+    .reset-btn:hover {
+      background: #b71c1c;
+    }
+
+    .score {
+      text-align: center;
+      font-size: 15px;
+      color: #555;
+      margin-bottom: 18px;
+    }
+
+    .score strong {
+      color: #667eea;
+    }
+
+    @media (max-width: 600px) {
+      .bingo-cell {
+        font-size: 11px;
+        min-height: 70px;
+        padding: 10px 6px;
+      }
+
+      .bingo-grid {
+        gap: 7px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <a href="index.html" class="home-link">Back to Home</a>
+  <h1>Eurovision Bingo</h1>
+
+  <div class="flags">🇦🇱🇦🇲🇦🇹🇦🇿🇧🇪🇨🇾🇨🇿🇩🇰🇪🇪🇫🇮🇫🇷🇬🇧🇩🇪🇬🇷🇮🇸🇮🇱🇮🇹🇱🇻🇱🇹🇱🇺🇲🇩🇲🇹🇲🇪🇳🇱🇲🇰🇳🇴🇵🇱🇵🇹🇷🇴🇸🇲🇷🇸🇸🇰🇸🇮🇪🇸🇸🇪🇨🇭🇺🇦</div>
+
+  <p class="subtitle">Watch Eurovision and tap each square when you spot it happening. First to fill a row, column, or diagonal wins!</p>
+
+  <div class="score">Spotted: <strong id="score">0</strong> / 16</div>
+
+  <div class="bingo-grid" id="bingo-grid"></div>
+
+  <div class="section">
+    <button class="reset-btn" id="reset-btn">New Card</button>
+  </div>
+
+  <p><em>All processing for this is done in your browser; no data is sent to any remote server.</em></p>
+</div>
+
+<script>
+  const POOL = [
+    "A key change in the final chorus",
+    "Performer uses a wind machine",
+    "Fire or pyrotechnics on stage",
+    "A violinist or string player performing live",
+    "Backing dancers in matching outfits",
+    "Singer performs partly in their native language",
+    "A country gives 12 points to their neighbour",
+    "Televote and jury give completely opposite results",
+    "A spokesperson stumbles over a country name",
+    "UK receives nil points (or close to it)",
+    "A ballad sung entirely in English wins",
+    "Political voting bloc is painfully obvious",
+    "Acrobatics or aerial performance on stage",
+    "A staged or spontaneous marriage proposal",
+    "LED backdrop shows dramatic space visuals",
+    "Interval act goes on far too long",
+    "Graham Norton makes a snarky geography joke",
+    "A contestant forgets their lyrics on stage",
+    "Flag waving in the audience goes out of control",
+    "A drag or gender-bending costume moment",
+    "Live instrument played on stage (not violin)",
+    "A singer cries during their performance",
+    "Props or staging gimmick that clearly cost a fortune",
+    "A running or jumping stage entrance",
+    "Three-minute intro before the song actually starts",
+    "Costumes with unexpected reveal or transformation",
+    "Singer thanks the audience in multiple languages",
+    "A protest or political statement on stage",
+    "Spokesperson mentions peace or unity in their speech",
+    "Backing track clearly louder than the live vocals",
+    "A completely unhinged novelty entry",
+    "A duo or group with wildly mismatched energy",
+  ];
+
+  const STORAGE_KEY_CARD = 'eurovision_bingo_card';
+  const STORAGE_KEY_MARKED = 'eurovision_bingo_marked';
+
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function generateCard() {
+    return shuffle(POOL).slice(0, 16);
+  }
+
+  function loadCard() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_CARD);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length === 16) return parsed;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function saveCard(card) {
+    localStorage.setItem(STORAGE_KEY_CARD, JSON.stringify(card));
+  }
+
+  function loadMarked() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_MARKED);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return new Set(parsed);
+      }
+    } catch (_) {}
+    return new Set();
+  }
+
+  function saveMarked(marked) {
+    localStorage.setItem(STORAGE_KEY_MARKED, JSON.stringify([...marked]));
+  }
+
+  function updateScore(marked) {
+    document.getElementById('score').textContent = marked.size;
+  }
+
+  function renderGrid(card, marked) {
+    const grid = document.getElementById('bingo-grid');
+    grid.innerHTML = '';
+    card.forEach((text, index) => {
+      const cell = document.createElement('div');
+      cell.className = 'bingo-cell' + (marked.has(index) ? ' marked' : '');
+      cell.textContent = text;
+      cell.addEventListener('click', () => {
+        if (marked.has(index)) {
+          marked.delete(index);
+          cell.classList.remove('marked');
+        } else {
+          marked.add(index);
+          cell.classList.add('marked');
+        }
+        saveMarked(marked);
+        updateScore(marked);
+      });
+      grid.appendChild(cell);
+    });
+    updateScore(marked);
+  }
+
+  let card = loadCard();
+  if (!card) {
+    card = generateCard();
+    saveCard(card);
+  }
+  let marked = loadMarked();
+  renderGrid(card, marked);
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (!confirm('Generate a new bingo card? This will clear your current card and all marked squares.')) return;
+    card = generateCard();
+    marked = new Set();
+    saveCard(card);
+    saveMarked(marked);
+    renderGrid(card, marked);
+  });
+</script>
+</body>
+</html>
