@@ -22,8 +22,8 @@ Count words in text with support for ignoring content within square brackets and
 ### [CSS Colour Extractor](https://m1ke.github.io/tools/css-colours.html)
 Paste any text containing CSS colour values and get a visual list with colour swatches. Supports hex, rgb/rgba, and hsl/hsla formats.
 
-### [SQL CLI to CSV Converter](https://m1ke.github.io/tools/sql-csv.html)
-Convert SQL command-line table output into CSV format, extract specific columns, and wrap values with custom templates.
+### [CSV Tools](https://m1ke.github.io/tools/sql-csv.html)
+Work with CSV or TSV data: extract a single column, sort it, filter to unique values, wrap values with custom templates, or convert SQL command-line table output into CSV.
 
 ### [SQL Insert Generator](https://m1ke.github.io/tools/sql-insert.html)
 Transform SQL SELECT output (vertical format with \G) into INSERT statements for easy data duplication.

@@ -58,9 +58,11 @@ Compares two Psalm array type definitions from error messages and shows only the
 - Example output: `{"role": {"first": "array<array-key, mixed>", "second": "list<string>"}}`
 - Note: Core logic is in `psalm-compare.js` (shared with `psalm-compare.test.js`) to prevent code drift
 
-### sql-csv.html - SQL CLI to CSV Converter
-Converts SQL CLI table output (the ASCII art format with `+--+` borders) into CSV format.
+### sql-csv.html - CSV Tools
+Works with CSV/TSV data, including converting SQL CLI table output (the ASCII art format with `+--+` borders) into CSV format. Filename kept as `sql-csv.html` to preserve the published URL.
 - Extracts specific columns by name
+- CSV/TSV data can also be pasted directly into the output box, and column extract/wrap still work
+- Unique and sort options: de-duplicate and/or sort the column list (numeric-aware); either one defaults to the first column when no name is given
 - Wrap feature: replaces `%%` placeholders with column values
 - Example input format:
   ```

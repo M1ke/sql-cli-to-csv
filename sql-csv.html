@@ -3,28 +3,33 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Convert SQL CLI to CSV</title>
+    <title>CSV Tools</title>
     <link rel="stylesheet" href="style.css">
   </head>
   <body class="sql-tool">
     <div class="container">
       <a href="index.html" class="home-link">Back to Home</a>
-      <h1>Convert SQL CLI to CSV (or TSV)</h1>
+      <h1>CSV Tools</h1>
       <p class="subtitle">Made by M1ke - <a href="https://github.com/M1ke/tools" target="_blank" title="This opens in a new tab">Find this on GitHub</a></p>
-    <h2><label for="input">Input</label></h2>
+    <p>Extract, sort and wrap columns from CSV/TSV data, or convert SQL CLI table output into CSV.</p>
+    <h2><label for="input">SQL CLI</label></h2>
     <textarea name="input" id="input"></textarea>
-    <h2><label for="output">Output</label></h2>
+    <h2><label for="output">CSV/TSV</label></h2>
+    <p>This is filled in from the SQL CLI box above, but you can also paste CSV or TSV data straight in here and the features below will still work.</p>
     <textarea name="output" id="output"></textarea>
     <p><label for="format-toggle"><input type="checkbox" id="format-toggle" name="format-toggle"> Use TSV (tab-separated) instead of CSV</label></p>
     <p>Enter the name of a column, e.g "email" and if your CSV contains that column, the below textarea will include all values comma-separated. </p>
     <p><label for="field">Column name</label> <input type="text" name="field" id="field"/></p>
+    <p><label for="unique-toggle"><input type="checkbox" id="unique-toggle" name="unique-toggle"> Only list unique values</label></p>
+    <p><label for="sort-toggle"><input type="checkbox" id="sort-toggle" name="sort-toggle"> Sort values (numbers in numeric order)</label></p>
+    <p>With either of the above ticked and no column name, the first column is used.</p>
     <textarea readonly id="field-out" placeholder="Waiting for value column name"></textarea>
     <p>Wrapping lets you replace a value in a string with the value of the named column above, using the placeholder %% (two percent signs). To see how this works try out "Hello %% world %%"</p>
     <p><label for="wrap">Wrap</label> <input type="text" name="wrap" id="wrap"/></p>
     <textarea readonly id="wrap-out" placeholder="Waiting for valid column name and input to wrap (input must contain %% at least once)"></textarea>
     <p><em>All processing for this is done in your browser; no data is sent to any remote server</em></p>
     <h3>Example</h3>
-    <p>If you're unsure what input this is expecting, try pasting in the following:</p>
+    <p>If you're unsure what the SQL CLI box is expecting, try pasting in the following:</p>
     <pre>
 +---------+--------------+
 | user_id | name         |
@@ -39,63 +44,119 @@
         const useTsv = separator === '\t';
         return table.trim().split('\n').filter((line) => line[0]!=='+').map((line) => {
           line = line.substr(1, line.length-2)
-          const fields = line.split(' | ')
-          console.log(fields.length)
-          const processedFields = fields.map((field) => field.trim());
+          const fields = line.split(' | ').map((field) => field.trim());
 
           if (useTsv) {
             // For TSV, just join with tabs, no quoting
-            return processedFields.join(separator);
-          } else {
-            // For CSV, quote and escape
-            return processedFields.map((field) => field.replace('"', '""'))
-              .map((field) => '"'+field+'"').join(separator);
+            return fields.join(separator);
           }
+
+          return fields.map((field) => field.replace('"', '""'))
+            .map((field) => '"'+field+'"').join(separator);
         }).join('\n')
       }
 
-      function column(csvString, columnName) {
-         const lines = csvString.split('\n');
-         const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
-         const columnIndex = headers.indexOf(columnName);
-         return lines.slice(1).map(line => line.split(',')[columnIndex]).filter(val => val);
+      function detectSeparator(text){
+        return text.split('\n')[0].indexOf('\t')>=0 ? '\t' : ','
+      }
+
+      // Splits a single line, unquoting values and unescaping doubled quotes
+      function parseLine(line, separator){
+        const fields = []
+        let current = ''
+        let quoted = false
+        for (let i = 0; i < line.length; i++){
+          const char = line[i]
+          if (quoted){
+            if (char === '"' && line[i+1] === '"'){
+              current += '"'
+              i++
+              continue
+            }
+            if (char === '"'){
+              quoted = false
+              continue
+            }
+            current += char
+            continue
+          }
+          if (char === '"' && current === ''){
+            quoted = true
+            continue
+          }
+          if (char === separator){
+            fields.push(current.trim())
+            current = ''
+            continue
+          }
+          current += char
+        }
+        fields.push(current.trim())
+        return fields
+      }
+
+      const compareValues = (a, b) => a.localeCompare(b, undefined, { numeric: true })
+
+      function column(text, columnName, { unique = false, sort = false } = {}){
+        const lines = text.trim().split('\n').filter((line) => line.trim())
+        if (!lines.length){
+          return []
+        }
+
+        const separator = detectSeparator(text)
+        const headers = parseLine(lines[0], separator)
+        const columnIndex = columnName ? headers.indexOf(columnName) : 0
+        if (columnIndex < 0){
+          return []
+        }
+
+        const values = lines.slice(1).map((line) => parseLine(line, separator)[columnIndex]).filter((val) => val)
+        const filtered = unique ? [...new Set(values)] : values
+        return sort ? [...filtered].sort(compareValues) : filtered
+      }
+
+      function getOptions(){
+        return {
+          unique: document.getElementById('unique-toggle').checked,
+          sort: document.getElementById('sort-toggle').checked,
+        }
+      }
+
+      function getCsv(csv){
+        return csv || document.getElementById('output').value
       }
 
       function fieldReset(){
-         const fieldOutEl = document.getElementById('field-out')
-        fieldOutEl.value=''
-        fieldOutEl.rows=1
+        const fieldOutEl = document.getElementById('field-out')
+        fieldOutEl.value = ''
+        fieldOutEl.rows = 1
       }
 
       function wrapReset(){
-        fieldReset()
-         const wrapOutEl = document.getElementById('wrap-out')
+        const wrapOutEl = document.getElementById('wrap-out')
         wrapOutEl.value = ''
         wrapOutEl.rows = 1
       }
 
       function field(csv){
         const field = document.getElementById('field').value
-        if (!field){
+        const options = getOptions()
+        if (!field && !options.unique && !options.sort){
           fieldReset()
           return;
         }
-        
-        console.log('finding field', { field })
-        
-        if (!csv){
-          const input = document.getElementById('input').value
-          csv = csvFromTable(input)
-        }
 
-        fieldOut(csv, field)
+        fieldOut(getCsv(csv), field, options)
       }
 
-      function fieldOut(csv, field){
-        const list = column(csv, field)
+      function fieldOut(csv, field, options){
+        const list = column(csv, field, options)
+        if (!list.length){
+          fieldReset()
+          return;
+        }
 
         const fieldOutEl = document.getElementById('field-out')
-      
         fieldOutEl.value = list.join(',')
         fieldOutEl.rows = 3
       }
@@ -103,24 +164,21 @@
       function wrap(csv){
         const field = document.getElementById('field').value
         const wrap = document.getElementById('wrap').value
-        if (!field || !wrap || wrap.indexOf('%%')<0){
+        const options = getOptions()
+        if ((!field && !options.unique && !options.sort) || !wrap || wrap.indexOf('%%')<0){
           wrapReset()
           return;
         }
-        
-        console.log('wrapping field', { field, wrap })
-        
-        if (!csv){
-          const input = document.getElementById('input').value
-          csv = csvFromTable(input)
-        }
 
-        wrapOut(csv, field, wrap)
+        wrapOut(getCsv(csv), field, wrap, options)
       }
 
-      function wrapOut(csv, field, wrap){
-        // Slice(1, -1) here assumes string is always wrapped in comma, simpler than replacing them
-        const list = column(csv, field).map((val) => wrap.replace(/\%\%/g, val.slice(1, -1)))
+      function wrapOut(csv, field, wrap, options){
+        const list = column(csv, field, options).map((val) => wrap.replace(/%%/g, val))
+        if (!list.length){
+          wrapReset()
+          return;
+        }
 
         const wrapOutEl = document.getElementById('wrap-out')
         wrapOutEl.value = list.join("\n")
@@ -131,28 +189,32 @@
         return document.getElementById('format-toggle').checked ? '\t' : ',';
       }
 
+      function refresh(csv){
+        field(csv)
+        wrap(csv)
+      }
+
       function updateOutput() {
         const input = document.getElementById('input').value;
         if (!input) return;
 
-        const separator = getSeparator();
-        const csv = csvFromTable(input, separator);
+        const csv = csvFromTable(input, getSeparator());
         document.getElementById('output').value = csv;
 
-        field(csv);
-        wrap(csv);
+        refresh(csv);
       }
 
-      document.getElementById('input').addEventListener('input', (event) => {
-        console.log('Input', {event})
-        updateOutput();
-      })
+      document.getElementById('input').addEventListener('input', () => updateOutput())
 
-      document.getElementById('format-toggle').addEventListener('change', () => {
-        updateOutput();
-      })
+      document.getElementById('output').addEventListener('input', () => refresh())
 
-      document.getElementById('field').addEventListener('input', () => field())
+      document.getElementById('format-toggle').addEventListener('change', () => updateOutput())
+
+      document.getElementById('unique-toggle').addEventListener('change', () => refresh())
+
+      document.getElementById('sort-toggle').addEventListener('change', () => refresh())
+
+      document.getElementById('field').addEventListener('input', () => refresh())
       document.getElementById('wrap').addEventListener('input', () => wrap())
     </script>
     </div>
