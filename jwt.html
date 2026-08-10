@@ -41,6 +41,8 @@
 				</div>
 			</div>
 
+			<div id="timestamps" class="info-box hidden"></div>
+
 			<p>Edit any of the above fields to reconstruct the token. If setting the header "alg" field to a different
 				value, edit the signature (this page won't sign the token for you). If using "alg=none" then clear the
 				signature textarea.</p>
@@ -79,6 +81,9 @@
 		const jkuUrlEl = document.getElementById('jkuUrl');
 		const verifyBtn = document.getElementById('verifyBtn');
 		const verificationResult = document.getElementById('verificationResult');
+		const timestampsEl = document.getElementById('timestamps');
+
+		const TWO_YEARS_SECONDS = 2 * 365.25 * 24 * 60 * 60;
 
 
 		function base64UrlDecode(str) {
@@ -121,6 +126,63 @@
 			}
 		}
 
+		function timestampSeconds(value) {
+			if (typeof value === 'string' && /^\d+$/.test(value)) {
+				value = Number(value);
+			}
+			if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+				return null;
+			}
+			const now = Math.floor(Date.now() / 1000);
+			if (Math.abs(value - now) > TWO_YEARS_SECONDS) {
+				return null;
+			}
+			return value;
+		}
+
+		function relativeTime(seconds) {
+			const diff = seconds - Math.floor(Date.now() / 1000);
+			const units = [['year', 31557600], ['month', 2629800], ['day', 86400], ['hour', 3600], ['minute', 60], ['second', 1]];
+			const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+			const unit = units.find(([, size]) => Math.abs(diff) >= size) || units[units.length - 1];
+			return formatter.format(Math.round(diff / unit[1]), unit[0]);
+		}
+
+		function formatTimestamp(seconds) {
+			const formatted = new Date(seconds * 1000).toLocaleString(undefined, {
+				dateStyle: 'medium',
+				timeStyle: 'long'
+			});
+			return `${formatted} (${relativeTime(seconds)})`;
+		}
+
+		function updateTimestamps(payloadJson) {
+			const rows = Object.entries(payloadJson || {})
+				.map(([key, value]) => [key, timestampSeconds(value)])
+				.filter(([, seconds]) => seconds !== null);
+
+			timestampsEl.textContent = '';
+			if (!rows.length) {
+				timestampsEl.classList.add('hidden');
+				return;
+			}
+
+			const title = document.createElement('strong');
+			title.textContent = 'Likely timestamps:';
+			timestampsEl.appendChild(title);
+
+			rows.forEach(([key, seconds]) => {
+				const row = document.createElement('div');
+				const name = document.createElement('strong');
+				name.textContent = key;
+				row.appendChild(name);
+				row.appendChild(document.createTextNode(`: ${formatTimestamp(seconds)}`));
+				timestampsEl.appendChild(row);
+			});
+
+			timestampsEl.classList.remove('hidden');
+		}
+
 		function reconstructJWT() {
 			try {
 				headerError.classList.add('hidden');
@@ -128,6 +190,7 @@
 
 				const headerJson = JSON.parse(headerEl.value);
 				const payloadJson = JSON.parse(payloadEl.value);
+				updateTimestamps(payloadJson);
 
 				const encodedHeader = base64UrlEncode(JSON.stringify(headerJson));
 				const encodedPayload = base64UrlEncode(JSON.stringify(payloadJson));
@@ -149,6 +212,7 @@
 					} catch {
 						payloadError.textContent = 'Invalid JSON in payload';
 						payloadError.classList.remove('hidden');
+						timestampsEl.classList.add('hidden');
 					}
 				}
 			}
