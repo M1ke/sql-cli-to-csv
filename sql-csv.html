@@ -17,6 +17,7 @@
     <h2><label for="output">CSV/TSV</label></h2>
     <p>This is filled in from the SQL CLI box above, but you can also paste CSV or TSV data straight in here and the features below will still work.</p>
     <textarea name="output" id="output"></textarea>
+    <p><button type="button" id="download" disabled>Download file</button></p>
     <p><label for="format-toggle"><input type="checkbox" id="format-toggle" name="format-toggle"> Use TSV (tab-separated) instead of CSV</label></p>
     <p>Enter the name of a column, e.g "email" and if your CSV contains that column, the below textarea will include all values comma-separated. </p>
     <p><label for="field">Column name</label> <input type="text" name="field" id="field"/></p>
@@ -192,6 +193,26 @@
       function refresh(csv){
         field(csv)
         wrap(csv)
+        downloadState()
+      }
+
+      function downloadState(){
+        document.getElementById('download').disabled = !document.getElementById('output').value.trim()
+      }
+
+      function download(){
+        const text = document.getElementById('output').value
+        if (!text.trim()) return;
+
+        const useTsv = getSeparator() === '\t'
+        const type = useTsv ? 'text/tab-separated-values' : 'text/csv'
+        const blob = new Blob([text], { type: type+';charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = 'data.'+(useTsv ? 'tsv' : 'csv')
+        link.click()
+        URL.revokeObjectURL(url)
       }
 
       function updateOutput() {
@@ -216,6 +237,9 @@
 
       document.getElementById('field').addEventListener('input', () => refresh())
       document.getElementById('wrap').addEventListener('input', () => wrap())
+      document.getElementById('download').addEventListener('click', () => download())
+
+      downloadState()
     </script>
     </div>
   </body>

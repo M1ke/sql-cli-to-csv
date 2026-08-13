@@ -64,6 +64,7 @@ Works with CSV/TSV data, including converting SQL CLI table output (the ASCII ar
 - CSV/TSV data can also be pasted directly into the output box, and column extract/wrap still work
 - Unique and sort options: de-duplicate and/or sort the column list (numeric-aware); either one defaults to the first column when no name is given
 - Wrap feature: replaces `%%` placeholders with column values
+- Download button saves the CSV/TSV box as a `.csv`/`.tsv` file via a `Blob` object URL (no server involved)
 - Example input format:
   ```
   +---------+--------------+
